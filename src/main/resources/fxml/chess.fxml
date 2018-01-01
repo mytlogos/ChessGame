@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Group?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.Chess">
+   <center>
+       <GridPane fx:id="boardGrid" alignment="CENTER" />
+   </center>
+    <left>
+        <fx:include fx:id="blackPlayer" source="playerStatistics.fxml" />
+    </left>
+    <right>
+        <fx:include fx:id="whitePlayer" source="playerStatistics.fxml" />
+    </right>
+   <top>
+      <VBox BorderPane.alignment="CENTER">
+         <children>
+            <MenuBar>
+              <menus>
+                <Menu mnemonicParsing="false" text="File">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Close" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Edit">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Delete" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="About" />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
+            <HBox spacing="5.0">
+               <children>
+                  <Group fx:id="blackPlayerArrow">
+                     <HBox.margin>
+                        <Insets left="50.0" />
+                     </HBox.margin>
+                  </Group>
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Button fx:id="gameChangerBtn" mnemonicParsing="false" onAction="#changeGame" text="Start" />
+                  <Button fx:id="pauseBtn" layoutX="184.0" layoutY="10.0" mnemonicParsing="false" onAction="#pause" text="Pause" />
+                  <Text fx:id="timer" strokeType="OUTSIDE" strokeWidth="0.0" />
+                  <Region layoutX="10.0" layoutY="10.0" HBox.hgrow="ALWAYS" />
+                  <Group fx:id="whitePlayerArrow">
+                     <HBox.margin>
+                        <Insets right="50.0" />
+                     </HBox.margin>
+                  </Group>
+               </children>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+            </HBox>
+         </children>
+      </VBox>
+   </top>
+</BorderPane>

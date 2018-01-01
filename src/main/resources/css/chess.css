@@ -1,0 +1,28 @@
+.root{
+    black-tile: brown;
+    white-tile: beige;
+}
+.board-tile-black{
+    -fx-background-color: black-tile;
+}
+.board-tile-black:empty{
+    -fx-effect: innershadow(gaussian, derive(black-tile,100%),10,0.5,0,0);
+}
+.board-tile-black:enemy{
+    -fx-effect: innershadow(gaussian, ladder(derive(black-tile,100%), red 50%, orange 50%),10,0.5,0,0);
+}
+.board-tile-black:hazard{
+    -fx-effect: innershadow(gaussian, ladder(derive(black-tile,100%), yellow 50%, green 50%),10,0.5,0,0);
+}
+.board-tile-white{
+    -fx-background-color: white-tile;
+}
+.board-tile-white:empty{
+    -fx-effect: innershadow(gaussian, derive(white-tile, -100%),10,0.5,0,0);
+}
+.board-tile-white:enemy{
+    -fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), red 50%, orange 50%),10,0.5,0,0);
+}
+.board-tile-white:hazard{
+    -fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), yellow 50%, green 50%),10,0.5,0,0);
+}
