@@ -1,14 +1,25 @@
 package chessGame.gui;
 
 
-import chessGame.figures.Figure;
+import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.Position;
+import javafx.animation.Transition;
+import javafx.animation.TranslateTransition;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.util.Duration;
+
+import java.util.function.Consumer;
 
 /**
  *
@@ -40,8 +51,13 @@ public class FigureView extends ImageView {
                 boardGrid.getGrid().getChildren().add(this);
             }
             boardGrid.drag(this, event);
+            boardGrid.setChosenPosition(boardGrid.getPositionPane(getPosition()));
             toFront();
         };
+        initListener();
+    }
+
+    private void initListener() {
         hoverProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue && isActive()) {
                 saveCursor(getCursor());
@@ -52,7 +68,7 @@ public class FigureView extends ImageView {
         });
 
         activeProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
+            if (newValue && !getPosition().equals(Position.Bench)) {
                 setOnDragDetected(onDragDetected);
             } else {
                 setOnDragDetected(null);
@@ -69,7 +85,81 @@ public class FigureView extends ImageView {
                 setManaged(true);
             }
         });
+        getFigure().positionProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && oldValue != null && !isDragging()) {
+                if (newValue != Position.Promoted) {
+                    if (newValue != Position.Bench) {
+                        final FigurePosition oldPane = boardGrid.getPositionPane(oldValue);
+                        final FigurePosition newPane = boardGrid.getPositionPane(newValue);
 
+                        //normal move, after this the next player is at move
+                        final Transition transition = getTransition(this, oldPane, newPane, node -> {
+                            oldPane.setFigure(null);
+                            newPane.setFigure(this);
+                            boardGrid.getBoard().atMoveFinished();
+                        });
+                        transition.play();
+                    } else {
+
+                        //benching move
+                        final FigurePosition oldPane = boardGrid.getPositionPane(oldValue);
+                        final Bench bench = boardGrid.getChess().getBench(getFigure().getPlayer());
+
+                        final Transition transition = getTransition(this, oldPane, bench, node -> {
+                            oldPane.setFigure(null);
+                            boardGrid.getChess().showLostFigure(getFigure());
+                        });
+                        transition.play();
+                    }
+                } else {
+                    final FigurePosition oldPane = boardGrid.getPositionPane(oldValue);
+                    oldPane.setFigure(null);
+                }
+            }
+        });
+        boardGrid.getPositionPane(getPosition()).setFigure(this);
+    }
+
+    private Transition getTransition(Node node, Pane start, Pane goal, Consumer<Node> consumer) {
+        TranslateTransition transition = new TranslateTransition();
+        transition.setNode(node);
+
+        final Bounds local = start.localToScene(start.getBoundsInLocal());
+        final Bounds bounds = goal.localToScene(goal.getBoundsInLocal());
+
+        final double toX = bounds.getMinX() + (bounds.getWidth() / 2);
+        final double fromX = local.getMinX() + (local.getWidth() / 2);
+        final double translateX = toX - fromX;
+
+        final double toY = bounds.getMinY() + (bounds.getHeight() / 2);
+        final double fromY = local.getMinY() + (local.getHeight() / 2);
+        final double translateY = toY - fromY - 5;
+
+        transition.setToX(translateX);
+        transition.setToY(translateY);
+
+        //set moving "speed", with an base speed of 100 units per seconds or a max duration of 3 seconds
+        final double xPow = Math.pow(translateX, 2);
+        final double yPow = Math.pow(translateY, 2);
+        final double distance = Math.sqrt(xPow + yPow);
+        double duration = distance / 100d;
+        duration = Math.min(duration, 3.0);
+        transition.setDuration(Duration.seconds(duration));
+
+        node.setTranslateY(-5);
+        //important, else it will be hidden behind other positionPanes
+        start.toFront();
+        node.setEffect(new DropShadow(10, 0, 10, Color.BLACK));
+        transition.setOnFinished(event -> {
+            node.setEffect(null);
+            consumer.accept(node);
+            node.setManaged(true);
+
+            node.setTranslateX(0);
+            node.setTranslateY(0);
+        });
+
+        return transition;
     }
 
     @Override
@@ -119,6 +209,8 @@ public class FigureView extends ImageView {
     public String toString() {
         return "FigureView{" +
                 "figure=" + figure +
+                ", active=" + active.get() +
+                ", dragging=" + dragging.get() +
                 '}';
     }
 

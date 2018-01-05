@@ -1,4 +1,4 @@
-package chessGame.figures;
+package chessGame.mechanics.figures;
 
 import chessGame.mechanics.Board;
 import chessGame.mechanics.Player;
@@ -17,20 +17,33 @@ import java.util.stream.Collectors;
 /**
  *
  */
-public abstract class Figure implements Serializable, Comparable<Figure> {
+public abstract class Figure implements Serializable, Comparable<Figure>, Cloneable {
     private transient ObjectProperty<Position> position = new SimpleObjectProperty<>();
 
+    private static int counter;
+    private final int id;
     private final FigureType type;
     private final Player player;
-    final transient Board board;
+    transient Board board;
 
     private transient Image image;
 
     Figure(Position position, Player player, FigureType type, Board board) {
         this.board = board;
-        this.position.set(position);
         this.player = player;
         this.type = type;
+        this.position.set(position);
+        positionProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                if (newValue.equals(Position.Bench)) {
+                    board.getBench().add(this);
+                }
+                if (oldValue != null && oldValue.equals(Position.Bench)) {
+                    board.getBench().remove(this);
+                }
+            }
+        });
+        id = counter++;
     }
 
     public abstract List<Position> getAllowedPositions();
@@ -55,7 +68,7 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
         return type;
     }
 
-    List<Position> getVertical(int max) {
+    final List<Position> getVertical(int max) {
         List<Position> positions = new ArrayList<>();
 
         final int row = getPosition().getRow();
@@ -75,7 +88,7 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
         return positions;
     }
 
-    List<Position> getHorizontal(int max) {
+    final List<Position> getHorizontal(int max) {
         List<Position> positions = new ArrayList<>();
 
         final int row = getPosition().getRow();
@@ -96,7 +109,7 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
         return positions;
     }
 
-    List<Position> getDiagonal(int max) {
+    final List<Position> getDiagonal(int max) {
         List<Position> positions = new ArrayList<>();
 
         final int row = getPosition().getRow();
@@ -124,18 +137,25 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
         return positions;
     }
 
-    private boolean addPosition(int newRow, int newColumn, Collection<Position> positions) {
-        final Position position = new Position(newRow, newColumn);
-
-        if (checkPositionIndex(position)) {
-            final Figure figure = board.getFigure(position);
-            positions.add(position);
-            return figure == null;
+    final boolean addPosition(int newRow, int newColumn, Collection<Position> positions) {
+        if (!Position.isInBoard(newRow, newColumn)) {
+            return false;
         }
-        return true;
+        Position position = Position.get(newRow, newColumn);
+        final Figure figure = board.getFigure(position);
+
+        if (figure == null) {
+            positions.add(position);
+            return true;
+        } else {
+            if (!figure.getPlayer().equals(getPlayer())) {
+                positions.add(position);
+            }
+            return false;
+        }
     }
 
-    void checkPositionState(Position position) {
+    private void checkPositionState(Position position) {
         final Figure figure = board.getFigure(position);
 
         if (figure != null) {
@@ -144,14 +164,15 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
         }
     }
 
-    boolean checkPositionIndex(Position position) {
-        return position.getRow() >= 1 && position.getRow() <= 8 && position.getColumn() >= 1 && position.getColumn() <= 8;
-    }
-
     List<Position> checkPositions(Collection<Position> positions) {
-        final List<Position> positionList = positions.stream().filter(this::checkPositionIndex).filter(((Predicate<Position>) Position::isAlly).negate()).collect(Collectors.toList());
+        final List<Position> positionList = positions.
+                stream().
+                filter(Position::isInBoard).
+                filter(((Predicate<Position>) Position::isAlly).negate()).
+                collect(Collectors.toList());
         positionList.forEach(this::checkPositionState);
-        return positionList;
+
+        return getPosition().equals(Position.Bench) ? new ArrayList<>() : positionList;
     }
 
     @Override
@@ -170,17 +191,16 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
 
         Figure figure = (Figure) o;
 
-        if (!getPosition().equals(figure.getPosition())) return false;
-        if (getType() != figure.getType()) return false;
-        if (getPlayer() != figure.getPlayer()) return false;
-        return board.equals(figure.board);
+        return getPosition().equals(figure.getPosition())
+                && getType() == figure.getType()
+                && getPlayer().equals(figure.getPlayer());
     }
 
     @Override
     public int hashCode() {
         int result = getType().hashCode();
         result = 31 * result + getPlayer().hashCode();
-        result = 31 * result + board.hashCode();
+        result = 31 * result + id;
         return result;
     }
 
@@ -197,5 +217,27 @@ public abstract class Figure implements Serializable, Comparable<Figure> {
             image = getType().getImage(getPlayer());
         }
         return image;
+    }
+
+    final public Figure clone(Board board) {
+        final Figure clone = clone();
+        if (clone != null) {
+            clone.board = board;
+            return clone;
+        }
+        return null;
+    }
+
+    @Override
+    final public Figure clone() {
+        try {
+            final Figure clone = (Figure) super.clone();
+            clone.position = new SimpleObjectProperty<>(getPosition());
+            clone.board = board;
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

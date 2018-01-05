@@ -1,10 +1,11 @@
 package chessGame.gui;
 
-import chessGame.figures.Figure;
-import chessGame.figures.FigureType;
 import chessGame.mechanics.Player;
+import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.figures.FigureType;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
@@ -15,7 +16,7 @@ import java.util.Map;
 /**
  *
  */
-public class PlayerStatistics extends VBox {
+public class Bench extends VBox {
 
     @FXML
     private Text playerName;
@@ -25,12 +26,13 @@ public class PlayerStatistics extends VBox {
 
     private Player player;
 
-    public PlayerStatistics() {
+    public Bench() {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/playerStatistics.fxml"));
         loader.setRoot(this);
         loader.setController(this);
         try {
             loader.load();
+
         } catch (IOException ignored) {
         }
     }
@@ -47,14 +49,22 @@ public class PlayerStatistics extends VBox {
         }
     }
 
+    public Node getContainer() {
+        return lostFigureContainer;
+    }
+
     public void setPlayer(Player player) {
         this.player = player;
 
-        if (player == Player.BLACK) {
-            playerName.setText("Spieler Schwarz");
-        } else {
+        if (player.isWhite()) {
             playerName.setText("Spieler Weiß");
-
+        } else {
+            playerName.setText("Spieler Schwarz");
         }
+    }
+
+    public void reset() {
+        lostFigureContainer.getChildren().clear();
+        lostFigureItemMap.clear();
     }
 }

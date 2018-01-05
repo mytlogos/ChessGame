@@ -1,6 +1,7 @@
 package chessGame.gui;
 
-import chessGame.figures.Figure;
+import chessGame.mechanics.Game;
+import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.Position;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.List;
  */
 public class RoundManager {
     private final BoardGrid board;
+    private Game game;
 
     RoundManager(BoardGrid board) {
         this.board = board;
@@ -17,26 +19,34 @@ public class RoundManager {
     }
 
     private void initManager() {
-        board.getBoard().atMoveProperty().addListener((observable, oldValue, newValue) -> {
-            if (oldValue != null) {
-                oldValue.getFigures().forEach(figure -> board.getFigure(figure).setActive(false));
+        board.boardProperty().addListener((observable, oldValue, newValue) -> newValue.atMovePlayerProperty().addListener((observable1, playerNotAtMove, playerAtMove) -> {
+            if (playerNotAtMove != null) {
+                playerNotAtMove.getFigures().forEach(figure -> board.getFigure(figure).setActive(false));
             }
-            if (newValue != null) {
-                newValue.getFigures().forEach(figure -> board.getFigure(figure).setActive(true));
+            if (playerAtMove != null) {
+                playerAtMove.getFigures().forEach(figure -> board.getFigure(figure).setActive(true));
             }
-        });
+        }));
     }
 
 
 
     static void showPositions(Figure figure, BoardGrid board) {
         final List<Position> allowedPositions = figure.getAllowedPositions();
+        allowedPositions.stream().map(board::getPositionPane).forEach(FigurePosition::setEnemy);
         allowedPositions.stream().filter(Position::isEmpty).map(board::getPositionPane).forEach(FigurePosition::setEmpty);
-        allowedPositions.stream().filter(Position::isEnemy).map(board::getPositionPane).forEach(FigurePosition::setEnemy);
     }
 
     static void disableEffects(Figure figure, BoardGrid board) {
         final List<Position> allowedPositions = figure.getAllowedPositions();
         allowedPositions.stream().map(board::getPositionPane).forEach(FigurePosition::resetEffect);
+    }
+
+    public void setGame(Game game) {
+        this.game = game;
+    }
+
+    public Game getGame() {
+        return game;
     }
 }

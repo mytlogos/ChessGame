@@ -1,4 +1,4 @@
-package chessGame.figures;
+package chessGame.mechanics.figures;
 
 import chessGame.mechanics.Board;
 import chessGame.mechanics.Player;
@@ -6,11 +6,12 @@ import chessGame.mechanics.Position;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
  */
-public class King extends Figure {
+public final class King extends Figure {
     private boolean moved;
 
     public King(Position position, Player player, Board board) {
@@ -29,4 +30,7 @@ public class King extends Figure {
         return checkPositions(positions);
     }
 
+    public boolean hasMoved() {
+        return moved;
+    }
 }

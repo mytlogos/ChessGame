@@ -1,4 +1,4 @@
-package chessGame.figures;
+package chessGame.mechanics.figures;
 
 import chessGame.mechanics.Board;
 import chessGame.mechanics.Player;
@@ -10,7 +10,7 @@ import java.util.List;
 /**
  *
  */
-public class Rook extends Figure {
+public final class Rook extends Figure {
     private boolean moved;
 
     public Rook(Position position, Player player, Board board) {
@@ -26,5 +26,9 @@ public class Rook extends Figure {
         positions.addAll(getVertical(8));
 
         return checkPositions(positions);
+    }
+
+    public boolean eligibleForCastling() {
+        return moved && (getPosition().getColumn() == 8 || getPosition().getColumn() ==  1);
     }
 }

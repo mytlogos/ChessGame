@@ -1,6 +1,6 @@
 package chessGame.gui;
 
-import chessGame.figures.Figure;
+import chessGame.mechanics.figures.Figure;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.image.ImageView;

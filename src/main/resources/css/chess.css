@@ -14,6 +14,18 @@
 .board-tile-black:hazard{
     -fx-effect: innershadow(gaussian, ladder(derive(black-tile,100%), yellow 50%, green 50%),10,0.5,0,0);
 }
+.board-tile-black:selected{
+-fx-border-color: gold;
+-fx-border-width: 10;
+    /*-fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), blue 50%, white 50%),10,0.5,0,0);*/
+}
+.board-tile-black:chosen{
+    -fx-border-color: blue;
+-fx-border-width: 10;
+
+    /*-fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), black 50%, white 50%),10,0.5,0,0);*/
+}
+
 .board-tile-white{
     -fx-background-color: white-tile;
 }
@@ -25,4 +37,10 @@
 }
 .board-tile-white:hazard{
     -fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), yellow 50%, green 50%),10,0.5,0,0);
+}
+.board-tile-white:selected{
+    -fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), blue 50%, white 50%),10,0.5,0,0);
+}
+.board-tile-white:chosen{
+    -fx-effect: innershadow(gaussian, ladder(derive(white-tile, -100%), black 50%, white 50%),10,0.5,0,0);
 }

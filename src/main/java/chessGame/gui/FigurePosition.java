@@ -1,6 +1,7 @@
 package chessGame.gui;
 
 import chessGame.mechanics.*;
+import chessGame.mechanics.figures.Figure;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -9,9 +10,9 @@ import javafx.css.PseudoClass;
 import javafx.scene.Parent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.text.Text;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  *
@@ -19,7 +20,6 @@ import java.io.Serializable;
 public class FigurePosition extends StackPane implements Serializable {
     private final Position position;
     private final BoardGrid boardGrid;
-    private final Color color;
 
     private BooleanProperty enemy = new SimpleBooleanProperty() {
         @Override
@@ -43,13 +43,34 @@ public class FigurePosition extends StackPane implements Serializable {
         }
     };
 
+
+    private BooleanProperty selected = new SimpleBooleanProperty() {
+        @Override
+        protected void invalidated() {
+            pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, get());
+        }
+    };
+
+
+    private BooleanProperty chosen = new SimpleBooleanProperty() {
+        @Override
+        protected void invalidated() {
+            pseudoClassStateChanged(CHOSEN_PSEUDO_CLASS, get());
+        }
+    };
+
     private final static PseudoClass EMPTY_PSEUDO_CLASS = PseudoClass.getPseudoClass("empty");
     private final static PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
     private final static PseudoClass ENEMY_PSEUDO_CLASS = PseudoClass.getPseudoClass("enemy");
     private final static PseudoClass HAZARD_PSEUDO_CLASS = PseudoClass.getPseudoClass("hazard");
+    private final static PseudoClass CHOSEN_PSEUDO_CLASS = PseudoClass.getPseudoClass("chosen");
+
     private ObjectProperty<FigureView> figureViewObjectProperty = new SimpleObjectProperty<>();
 
     public FigurePosition(Position position, BoardGrid boardGrid) {
+        Objects.requireNonNull(position);
+        Objects.requireNonNull(boardGrid);
+
         this.position = position;
         this.boardGrid = boardGrid;
 
@@ -57,107 +78,167 @@ public class FigurePosition extends StackPane implements Serializable {
         setMaxSize(StackPane.USE_PREF_SIZE, StackPane.USE_PREF_SIZE);
         setMinSize(StackPane.USE_PREF_SIZE, StackPane.USE_PREF_SIZE);
 
-        if (position.getRow() % 2 == 1) {
-            if (position.getColumn() % 2 == 1) {
-                this.color = Color.Black;
-            } else {
-                this.color = Color.White;
-            }
-        } else {
-            if (position.getColumn() % 2 == 0) {
-                this.color = Color.Black;
-            } else {
-                this.color = Color.White;
-            }
-        }
-        color.setStyleClass(this);
-        final Text e = new Text();
-        e.toBack();
-        figureViewProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                e.setText("besetzt");
-            } else {
-                e.setText("frei");
-            }
-        });
-        getChildren().add(e);
+        setColor(position);
 
         initListener();
         initHandler();
     }
 
-    private void initHandler() {
-        setOnMouseDragReleased(event -> {
-            final FigureView gestureSource = (FigureView) event.getGestureSource();
-            final FigureView previousView = figureViewProperty().get();
+    void moveTo(FigureView newFigureView) {
+        final FigureView previousView = figureViewProperty().get();
 
-            if (!gestureSource.equals(previousView)) {
-                final Position to = getPosition();
-                final PositionChange currentChange = new PositionChange(gestureSource.getPosition(), to);
+        if (!newFigureView.equals(previousView)) {
+            final Figure figure = newFigureView.getFigure();
 
-                final Move second;
+            if (figure != null) {
+                RoundManager.disableEffects(figure, boardGrid);
+            }
 
-                if (previousView != null) {
-                    final PositionChange previousChange = new PositionChange(previousView.getPosition(), to);
-                    second = new Move(previousView.getFigure(), previousChange);
+            final Position to = getPosition();
+            final PositionChange currentChange = new PositionChange(newFigureView.getPosition(), to);
+
+            Move second = null;
+
+            if (previousView != null) {
+                if (previousView.getFigure().getPlayer().equals(newFigureView.getFigure().getPlayer())) {
+                    boardGrid.getPositionPane(newFigureView.getPosition()).addCurrent();
                 } else {
-                    second = null;
-                }
-
-                final Move move = new Move(gestureSource.getFigure(), currentChange);
-                try {
-                    boardGrid.getBoard().makeMove(new PlayerMove(move, second));
-                } catch (IllegalMoveException ignored) {
-                    //todo for now ignore it
-                }
-                setEffect(null);
-            } else {
-                if (!getChildren().contains(gestureSource)) {
-                    getChildren().add(gestureSource);
+                    final PositionChange previousChange = new PositionChange(previousView.getPosition(), Position.Bench);
+                    second = new Move(previousView.getFigure(), previousChange);
                 }
             }
 
+            final Move move = new Move(newFigureView.getFigure(), currentChange);
+            try {
+                boardGrid.getBoard().makeMove(new PlayerMove(move, second));
+                boardGrid.setChosenPosition(null);
+            } catch (IllegalMoveException ignored) {
+                System.out.println("illegal");
+                boardGrid.getPositionPane(newFigureView.getPosition()).addCurrent();
+                //todo make a popup depicting the infringement of rules
+            }
+        } else {
+            addCurrent();
+        }
+    }
+
+    private void setColor(Position position) {
+        if (position.getRow() % 2 == 1) {
+            if (position.getColumn() % 2 == 1) {
+                getStyleClass().add("board-tile-black");
+            } else {
+                getStyleClass().add("board-tile-white");
+            }
+        } else {
+            if (position.getColumn() % 2 == 0) {
+                getStyleClass().add("board-tile-black");
+            } else {
+                getStyleClass().add("board-tile-white");
+            }
+        }
+    }
+
+    private void initHandler() {
+        setOnMouseClicked(event -> {
+            boardGrid.setSelectedPosition(this);
+
+            if (isChosen()) {
+                boardGrid.setChosenPosition(null);
+            } else {
+                if (getFigureView() != null) {
+                    if (getFigureView().isActive()) {
+                        boardGrid.setChosenPosition(this);
+                    }
+                } else {
+                    boardGrid.setChosenPosition(this);
+                }
+            }
+        });
+
+        setOnMouseDragReleased(event -> {
+            final FigureView gestureSource = (FigureView) event.getGestureSource();
+            moveTo(gestureSource);
+
             gestureSource.setDragging(false);
+            boardGrid.getBoard().atMoveFinished();
             boardGrid.getGrid().getChildren().remove(gestureSource);
+            event.consume();
         });
     }
 
     private void initListener() {
-        figureViewProperty().addListener((observable, oldValue, newValue) -> {
-            if (oldValue != null) {
-                getChildren().remove(oldValue);
+        figureViewProperty().addListener((observable, oldFigure, newFigure) -> {
+            System.out.println("old: " + oldFigure + " new " + newFigure);
+            if (oldFigure != null) {
+                getChildren().remove(oldFigure);
             }
 
-            if (newValue != null) {
-                getChildren().add(newValue);
+            if (newFigure != null) {
+                getChildren().add(newFigure);
+                newFigure.activeProperty().addListener((observable1, oldValue1, newValue1) -> {
+                    if (!newValue1) {
+                        selected.set(false);
+                    }
+                });
             }
         });
 
         hoverProperty().addListener((observable, oldValue, newValue) -> {
-            final FigureView paneFigure = getFigure();
+            final FigureView paneFigure = getFigureView();
 
-            final Parent parent = getParent();
-
-            if (parent instanceof GridPane && paneFigure != null) {
+            if (paneFigure != null) {
                 if (newValue) {
                     RoundManager.showPositions(paneFigure.getFigure(), boardGrid);
-                } else if (!paneFigure.isDragging()) {
+                } else if (!paneFigure.isDragging() && !isChosen()) {
                     RoundManager.disableEffects(paneFigure.getFigure(), boardGrid);
                 }
             }
         });
+
+        chosenProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                RoundManager.showPositions(getFigureView().getFigure(), boardGrid);
+            } else if (getFigureView() != null){
+                RoundManager.disableEffects(getFigureView().getFigure(), boardGrid);
+            }
+        });
+    }
+
+    public boolean isChosen() {
+        return chosen.get();
+    }
+
+    public BooleanProperty chosenProperty() {
+        return chosen;
+    }
+
+    public void setChosen(boolean chosen) {
+        this.chosen.set(chosen);
     }
 
     public ObjectProperty<FigureView> figureViewProperty() {
         return figureViewObjectProperty;
     }
 
+    public boolean isSelected() {
+        return selected.get();
+    }
+
+    public BooleanProperty selectedProperty() {
+        return selected;
+    }
+
     public void setFigure(FigureView figure) {
-        FigureView old = figureViewObjectProperty.get();
+        FigureView old = getFigureView();
 
         if (old != null && figure != null && old != figure && old.getFigure().getPlayer() == figure.getFigure().getPlayer()) {
             throw new IllegalArgumentException();
         }
+        figureViewProperty().set(figure);
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected.set(selected);
     }
 
     public void setEnemy() {
@@ -171,7 +252,6 @@ public class FigurePosition extends StackPane implements Serializable {
     }
 
     public void setHazard() {
-        resetEffect();
         this.hazard.set(true);
     }
 
@@ -181,15 +261,11 @@ public class FigurePosition extends StackPane implements Serializable {
         this.hazard.set(false);
     }
 
-    public Color getColor() {
-        return color;
-    }
-
     public Position getPosition() {
         return position;
     }
 
-    public FigureView getFigure() {
+    public FigureView getFigureView() {
         return figureViewProperty().get();
     }
 
@@ -202,24 +278,8 @@ public class FigurePosition extends StackPane implements Serializable {
     }
 
     public void addCurrent() {
-        if (!getChildren().contains(getFigure())) {
-            getChildren().add(getFigure());
+        if (!getChildren().contains(getFigureView())) {
+            getChildren().add(getFigureView());
         }
     }
-
-    public enum Color {
-        Black("board-tile-black"),
-        White("board-tile-white"),;
-
-        private final String styleClass;
-
-        Color(String styleClass) {
-            this.styleClass = styleClass;
-        }
-
-        void setStyleClass(FigurePosition position) {
-            position.getStyleClass().add(styleClass);
-        }
-    }
-
 }

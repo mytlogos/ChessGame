@@ -6,30 +6,26 @@ import java.io.Serializable;
  *
  */
 public class Position implements Comparable<Position>, Serializable {
-    private int row;
-    private int column;
+    private final int row;
+    private final int column;
 
     private boolean isEmpty = true;
     private boolean isDangerous;
     private boolean isEnemy;
 
     public static Position Bench = new Position(-1, -1);
+    public static Position Promoted = new Position(-2, -2);
 
-    public Position(int row, int column) {
+    private Position(int row, int column) {
         this.row = row;
         this.column = column;
     }
 
     public static Position get(int rowIndex, int columnIndex) {
-        return new Position(rowIndex + 1, columnIndex + 1);
-    }
-
-    public int getRowIndex() {
-        return row - 1;
-    }
-
-    public int getColumnIndex() {
-        return column - 1;
+        if (!isInBoard(rowIndex, columnIndex)) {
+            throw new IllegalArgumentException();
+        }
+        return new Position(rowIndex, columnIndex);
     }
 
     public int getRow() {
@@ -44,7 +40,7 @@ public class Position implements Comparable<Position>, Serializable {
         if (column > 8 || column < 1) {
             throw new IllegalStateException();
         }
-        return String.valueOf((char) (column + 'A'));
+        return String.valueOf((char) (column -1 + 'A'));
     }
 
     public boolean isAlly() {
@@ -75,6 +71,14 @@ public class Position implements Comparable<Position>, Serializable {
         isEnemy = enemy;
     }
 
+    public boolean isInBoard() {
+        return getRow() >= 1 && getRow() <= 8 && getColumn() >= 1 && getColumn() <= 8;
+    }
+
+    public static boolean isInBoard(int row, int column) {
+        return row >= 1 && row <= 8 && column >= 1 && column <= 8;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -95,10 +99,9 @@ public class Position implements Comparable<Position>, Serializable {
 
     @Override
     public String toString() {
-        return "Position{" +
-                "row=" + row +
-                ", column=" + column +
-                '}';
+        return this == Position.Bench ? "Position{Bench}" :
+                this == Position.Promoted ? "Position{Promoted}" :
+                "Position{" + getColumnName() + getRow() + "}";
     }
 
     @Override

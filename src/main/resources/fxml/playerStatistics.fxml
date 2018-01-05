@@ -3,7 +3,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-<VBox prefHeight="400.0" prefWidth="200.0" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.PlayerStatistics">
+<VBox focusTraversable="true" prefHeight="400.0" prefWidth="200.0" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.Bench">
    <children>
       <Text fx:id="playerName" strokeType="OUTSIDE" strokeWidth="0.0" />
       <VBox fx:id="lostFigureContainer" />

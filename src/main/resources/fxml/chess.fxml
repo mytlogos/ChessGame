@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.Group?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
@@ -10,10 +9,11 @@
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-<BorderPane xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.Chess">
+<BorderPane onKeyPressed="#handleKeyPressed" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.ChessGame">
    <center>
        <GridPane fx:id="boardGrid" alignment="CENTER" />
    </center>
@@ -47,21 +47,22 @@
             </MenuBar>
             <HBox spacing="5.0">
                <children>
-                  <Group fx:id="blackPlayerArrow">
+                  <StackPane fx:id="blackPlayerArrow" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="40.0">
                      <HBox.margin>
                         <Insets left="50.0" />
                      </HBox.margin>
-                  </Group>
+                  </StackPane>
                   <Region HBox.hgrow="ALWAYS" />
                   <Button fx:id="gameChangerBtn" mnemonicParsing="false" onAction="#changeGame" text="Start" />
-                  <Button fx:id="pauseBtn" layoutX="184.0" layoutY="10.0" mnemonicParsing="false" onAction="#pause" text="Pause" />
+                  <Button fx:id="pauseBtn" mnemonicParsing="false" onAction="#pause" text="Pause" />
                   <Text fx:id="timer" strokeType="OUTSIDE" strokeWidth="0.0" />
+                  <Button fx:id="redoBtn" mnemonicParsing="false" onAction="#redo" text="Rückgängig" />
                   <Region layoutX="10.0" layoutY="10.0" HBox.hgrow="ALWAYS" />
-                  <Group fx:id="whitePlayerArrow">
+                  <StackPane fx:id="whitePlayerArrow" maxWidth="-Infinity" minWidth="-Infinity" prefWidth="40.0">
                      <HBox.margin>
                         <Insets right="50.0" />
                      </HBox.margin>
-                  </Group>
+                  </StackPane>
                </children>
                <padding>
                   <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />

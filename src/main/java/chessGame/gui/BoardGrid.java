@@ -1,14 +1,15 @@
 package chessGame.gui;
 
-import chessGame.figures.*;
 import chessGame.mechanics.*;
-import javafx.beans.binding.Bindings;
+import chessGame.mechanics.figures.Figure;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Cursor;
 import javafx.scene.Parent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 
 import java.io.Serializable;
@@ -19,32 +20,35 @@ import java.util.*;
  */
 public class BoardGrid implements Serializable {
     private GridPane gridPane;
-    private Chess chess;
-    private final Board board;
+    private ChessGame chess;
+
+    private final ObjectProperty<Board> board = new SimpleObjectProperty<>();
+    private final ObjectProperty<FigurePosition> selectedPosition = new SimpleObjectProperty<>();
+    private final ObjectProperty<FigurePosition> chosenPosition = new SimpleObjectProperty<>();
+
     private Map<Position, FigurePosition> positionMap = new TreeMap<>();
 
     public BoardGrid(GridPane gridPane, Board board) {
         this.gridPane = gridPane;
-        this.board = board;
+        this.board.set(board);
 
-        buildBoard();
-        initGridListener();
+        buildBoardGrid();
+        initListener();
     }
 
-    BoardGrid(Chess chess, Board board) {
+    BoardGrid(ChessGame chess) {
         this.chess = chess;
         this.gridPane = chess.getBoardGrid();
-        this.board = board;
 
-        buildBoard();
-        initGridListener();
+        buildBoardGrid();
+        initListener();
     }
 
     public Board getBoard() {
-        return board;
+        return board.get();
     }
 
-    private void initGridListener() {
+    private void initListener() {
         gridPane.setOnMouseDragOver(event -> {
             final Object source = event.getGestureSource();
             if (source != null && source instanceof FigureView) {
@@ -56,52 +60,113 @@ public class BoardGrid implements Serializable {
             final Object source = event.getGestureSource();
 
             if (source instanceof FigureView) {
-                final FigureView figure = (FigureView) source;
+                final FigureView figureView = (FigureView) source;
 
                 final double eventX = event.getX();
                 final double eventY = event.getY();
 
                 if (eventX < 0 || eventY < 0 || gridPane.getWidth() < eventX || gridPane.getHeight() < eventY) {
-                    setToOldPosition(figure);
+                    setToOldPosition(figureView);
                 }
-                figure.setManaged(true);
-                figure.setMouseTransparent(false);
+                figureView.setDragging(false);
             }
         });
 
-        board.atMoveProperty().addListener((observable, oldValue, newValue) -> chess.showPlayerAtMove(newValue));
+        gridPane.setOnMouseDragReleased(event -> {
+            final Object source = event.getGestureSource();
+            if (source instanceof FigureView) {
+                setToOldPosition((FigureView) source);
+            }
+        });
+
+        selectedPosition.addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                newValue.setSelected(true);
+            }
+
+            if (oldValue != null) {
+                oldValue.setSelected(false);
+            }
+        });
+
+        chosenPosition.addListener((observable, oldValue, newValue) -> {
+            if (oldValue == null && newValue != null) {
+                if (newValue.getFigureView() != null && newValue.getFigureView().isActive()) {
+                    newValue.setChosen(true);
+                    RoundManager.showPositions(newValue.getFigureView().getFigure(), this);
+                } else {
+                    chosenPosition.set(null);
+                }
+
+            } else if (oldValue != null && newValue != null && oldValue != newValue) {
+                if (newValue.getFigureView() != null && newValue.getFigureView().getFigure().getPlayer() == oldValue.getFigureView().getFigure().getPlayer()) {
+                    oldValue.setChosen(false);
+                    newValue.setChosen(true);
+                } else {
+                    newValue.moveTo(oldValue.getFigureView());
+
+                    oldValue.setChosen(false);
+                    newValue.setChosen(false);
+                    chosenPosition.set(null);
+                }
+
+            } else if (oldValue != null) {
+                oldValue.setChosen(false);
+            }
+        });
+
+        board.addListener((observable, oldValue, newValue) -> {
+            buildBoard(newValue);
+            newValue.atMovePlayerProperty().addListener((observable1, oldValue1, playerAtMove) -> {
+                if (chess != null && playerAtMove != null) {
+                    chess.showPlayerAtMove(playerAtMove);
+                }
+            });
+            newValue.defeatedFigureProperty().addListener((observable2, oldValue2, lostFigure) -> {
+                if (chess != null && lostFigure != null) {
+                    chess.showLostFigure(lostFigure);
+                }
+            });
+        });
+    }
+
+    public ObjectProperty<Board> boardProperty() {
+        return board;
+    }
+
+    ChessGame getChess() {
+        return chess;
+    }
+
+    private void buildBoard(Board board) {
+        figureViewMap.clear();
+        positionMap.forEach(((position, figurePosition) -> {
+            figurePosition.setFigure(null);
+
+            final Figure figure = board.getFigure(position);
+
+            if (figure != null) {
+                final FigureView figureView = new FigureView(figure, this);
+                figureViewMap.put(figure, figureView);
+                figurePosition.setFigure(figureView);
+            } else {
+                figurePosition.setFigure(null);
+            }
+        }));
+
     }
 
     private Map<Figure, FigureView> figureViewMap = new HashMap<>();
 
-    public void buildBoard() {
-        board.buildBoard();
-        gridPane.getChildren().clear();
-        figureViewMap.clear();
-        positionMap.clear();
-
-        setBorder(gridPane);
+    private void buildBoardGrid() {
+        setBorder();
 
         for (int row = 1; row <= 8; row++) {
             for (int column = 1; column <= 8; column++) {
-                final Position position = new Position(row, column);
-                final ObjectProperty<Figure> property = board.figureObjectProperty(position);
+                final Position position = Position.get(row, column);
 
-                final FigurePosition figurePosition = getFigurePosition(position);
+                final FigurePosition figurePosition = new FigurePosition(position, this);
                 positionMap.put(position, figurePosition);
-                final Figure figure = board.getFigure(position);
-
-                if (figure != null) {
-                    final FigureView view = new FigureView(figure, this);
-                    figureViewMap.put(figure, view);
-                }
-
-                figurePosition.figureViewProperty().bind(
-                        Bindings.createObjectBinding(
-                                () -> property.get() == null
-                                        ? null
-                                        : figureViewMap.get(property.get()), property)
-                );
                 gridPane.add(figurePosition, column, row);
             }
         }
@@ -112,7 +177,17 @@ public class BoardGrid implements Serializable {
     }
 
     public FigureView getFigure(Figure figure) {
-        return figureViewMap.get(figure);
+        return figureViewMap.computeIfAbsent(figure, (k) -> {
+            final FigureView figureView = new FigureView(k, this);
+            final Position position = figure.getPosition();
+
+            if (position.isInBoard()) {
+                getPositionPane(position).setFigure(figureView);
+                return figureView;
+            } else {
+                return null;
+            }
+        });
     }
 
     public FigurePosition getPositionPane(Position position) {
@@ -155,13 +230,57 @@ public class BoardGrid implements Serializable {
         return positionMap.hashCode();
     }
 
-    private FigurePosition getFigurePosition(Position position) {
-        final FigurePosition figurePosition = new FigurePosition(position, this);
-
-        return figurePosition;
+    @Override
+    public String toString() {
+        return "BoardGrid{" +
+                "board=" + board +
+                ", positionMap=" + positionMap +
+                ", figureViewMap=" + figureViewMap +
+                '}';
     }
 
-    private void setBorder(GridPane gridPane) {
+    public void moveFocus(KeyEvent event) {
+        final FigurePosition previousSelected = selectedPosition.get();
+        if (previousSelected == null) {
+            selectedPosition.set(getPositionPane(Position.get(1, 1)));
+
+
+        } else {
+            final Position previousSelectedPosition = previousSelected.getPosition();
+            final int column = previousSelectedPosition.getColumn();
+            final int row = previousSelectedPosition.getRow();
+
+            if (event.getCode() == KeyCode.KP_LEFT || event.getCode() == KeyCode.LEFT) {
+                if (column == 1) {
+                    selectedPosition.set(getPositionPane(Position.get(row, 8)));
+                } else {
+                    selectedPosition.set(getPositionPane(Position.get(row, column - 1)));
+                }
+            } else if (event.getCode() == KeyCode.KP_RIGHT || event.getCode() == KeyCode.RIGHT) {
+                if (column == 8) {
+                    selectedPosition.set(getPositionPane(Position.get(row, 1)));
+
+                } else {
+                    selectedPosition.set(getPositionPane(Position.get(row, column + 1)));
+                }
+            } else if (event.getCode() == KeyCode.KP_UP || event.getCode() == KeyCode.UP) {
+                if (row == 1) {
+                    selectedPosition.set(getPositionPane(Position.get(8, column)));
+                } else {
+                    selectedPosition.set(getPositionPane(Position.get(row - 1, column)));
+                }
+            } else if (event.getCode() == KeyCode.KP_DOWN || event.getCode() == KeyCode.DOWN) {
+                if (row == 8) {
+                    selectedPosition.set(getPositionPane(Position.get(1, column)));
+
+                } else {
+                    selectedPosition.set(getPositionPane(Position.get(row + 1, column)));
+                }
+            }
+        }
+    }
+
+    private void setBorder() {
         for (int row = 1; row <= 8; row++) {
             gridPane.add(new Text("" + (row)), 0, row);
         }
@@ -178,12 +297,38 @@ public class BoardGrid implements Serializable {
         positionPane.addCurrent();
     }
 
-    @Override
-    public String toString() {
-        return "BoardGrid{" +
-                "board=" + board +
-                ", positionMap=" + positionMap +
-                ", figureViewMap=" + figureViewMap +
-                '}';
+    public void setChosenPosition(FigurePosition chosenPosition) {
+        if (chosenPosition != null) {
+
+            final FigurePosition previousChosen = this.chosenPosition.get();
+            if (previousChosen != null) {
+                this.chosenPosition.set(chosenPosition);
+
+            } else if (chosenPosition.getFigureView() != null) {
+                this.chosenPosition.set(chosenPosition);
+            }
+        } else {
+            this.chosenPosition.set(null);
+        }
+    }
+
+    void setSelectedPosition(FigurePosition selectedPosition) {
+        this.selectedPosition.set(selectedPosition);
+    }
+
+    public void setChosen() {
+        final FigurePosition figurePosition = selectedPosition.get();
+        if (figurePosition == null) {
+            selectedPosition.set(getPositionPane(Position.get(1, 1)));
+            setChosenPosition(selectedPosition.get());
+        } else if (figurePosition == chosenPosition.get()) {
+            setChosenPosition(null);
+        } else {
+            setChosenPosition(figurePosition);
+        }
+    }
+
+    public void setBoard(Board board) {
+        this.board.set(board);
     }
 }
