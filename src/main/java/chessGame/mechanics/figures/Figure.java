@@ -214,7 +214,7 @@ public abstract class Figure implements Serializable, Comparable<Figure>, Clonea
 
     public Image getImage() {
         if (image == null) {
-            image = getType().getImage(getPlayer());
+            image = getType().getImage(getPlayer().getType());
         }
         return image;
     }

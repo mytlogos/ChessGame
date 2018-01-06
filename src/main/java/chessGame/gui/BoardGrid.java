@@ -19,6 +19,7 @@ import java.util.*;
  *
  */
 public class BoardGrid implements Serializable {
+    private final MoveMaker moveMaker;
     private GridPane gridPane;
     private ChessGame chess;
 
@@ -34,11 +35,13 @@ public class BoardGrid implements Serializable {
 
         buildBoardGrid();
         initListener();
+        moveMaker = new MoveMaker(this);
     }
 
     BoardGrid(ChessGame chess) {
         this.chess = chess;
         this.gridPane = chess.getBoardGrid();
+        this.moveMaker = new MoveMaker(this);
 
         buildBoardGrid();
         initListener();
@@ -122,15 +125,10 @@ public class BoardGrid implements Serializable {
                     chess.showPlayerAtMove(playerAtMove);
                 }
             });
-            newValue.defeatedFigureProperty().addListener((observable2, oldValue2, lostFigure) -> {
-                if (chess != null && lostFigure != null) {
-                    chess.showLostFigure(lostFigure);
-                }
-            });
         });
     }
 
-    public ObjectProperty<Board> boardProperty() {
+    ObjectProperty<Board> boardProperty() {
         return board;
     }
 
@@ -176,7 +174,7 @@ public class BoardGrid implements Serializable {
         return positionMap.values();
     }
 
-    public FigureView getFigure(Figure figure) {
+    public FigureView getFigureView(Figure figure) {
         return figureViewMap.computeIfAbsent(figure, (k) -> {
             final FigureView figureView = new FigureView(k, this);
             final Position position = figure.getPosition();

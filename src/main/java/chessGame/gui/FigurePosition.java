@@ -168,10 +168,9 @@ public class FigurePosition extends StackPane implements Serializable {
 
     private void initListener() {
         figureViewProperty().addListener((observable, oldFigure, newFigure) -> {
-            System.out.println("old: " + oldFigure + " new " + newFigure);
-            if (oldFigure != null) {
+            /*if (oldFigure != null) {
                 getChildren().remove(oldFigure);
-            }
+            }*/
 
             if (newFigure != null) {
                 getChildren().add(newFigure);

@@ -85,7 +85,8 @@ public class FigureView extends ImageView {
                 setManaged(true);
             }
         });
-        getFigure().positionProperty().addListener((observable, oldValue, newValue) -> {
+
+        /*getFigure().positionProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && oldValue != null && !isDragging()) {
                 if (newValue != Position.Promoted) {
                     if (newValue != Position.Bench) {
@@ -116,7 +117,7 @@ public class FigureView extends ImageView {
                     oldPane.setFigure(null);
                 }
             }
-        });
+        });*/
         boardGrid.getPositionPane(getPosition()).setFigure(this);
     }
 

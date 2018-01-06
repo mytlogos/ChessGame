@@ -1,6 +1,10 @@
 package chessGame.gui;
 
-import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.Player;
+import chessGame.mechanics.figures.FigureType;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.image.ImageView;
@@ -20,9 +24,9 @@ public class LostFigureItem extends HBox{
     @FXML
     private ImageView lostFigureView;
 
-    private int timesLost = 0;
+    private IntegerProperty timesLost = new SimpleIntegerProperty();
 
-    public LostFigureItem(Figure figure) {
+    LostFigureItem(FigureType figure, Player.PlayerType player) {
         final FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/lostFigureItem.fxml"));
         loader.setController(this);
         loader.setRoot(this);
@@ -30,12 +34,24 @@ public class LostFigureItem extends HBox{
             loader.load();
         } catch (IOException ignored) {
         }
-        timesLost++;
-        lostFigureCounter.setText(String.valueOf(timesLost));
-        lostFigureView.setImage(figure.getImage());
+        visibleProperty().bind(timesLost.isNotEqualTo(0));
+        lostFigureCounter.textProperty().bind(timesLost.asString());
+        lostFigureView.setImage(figure.getImage(player));
     }
 
-    public void increment() {
-        lostFigureCounter.setText(String.valueOf(++timesLost));
+    void reset() {
+        timesLost.set(0);
+    }
+
+    int getTimesLost() {
+        return timesLost.get();
+    }
+
+    ReadOnlyIntegerProperty timesLostProperty() {
+        return timesLost;
+    }
+
+    void increment() {
+        timesLost.set(timesLost.get() + 1);
     }
 }

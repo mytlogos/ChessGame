@@ -21,10 +21,10 @@ public class RoundManager {
     private void initManager() {
         board.boardProperty().addListener((observable, oldValue, newValue) -> newValue.atMovePlayerProperty().addListener((observable1, playerNotAtMove, playerAtMove) -> {
             if (playerNotAtMove != null) {
-                playerNotAtMove.getFigures().forEach(figure -> board.getFigure(figure).setActive(false));
+                playerNotAtMove.getFigures().forEach(figure -> board.getFigureView(figure).setActive(false));
             }
             if (playerAtMove != null) {
-                playerAtMove.getFigures().forEach(figure -> board.getFigure(figure).setActive(true));
+                playerAtMove.getFigures().forEach(figure -> board.getFigureView(figure).setActive(true));
             }
         }));
     }

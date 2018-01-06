@@ -24,6 +24,11 @@ import java.util.Optional;
  */
 public class ChessGame {
     @FXML
+    private VBox whitePlayer;
+    @FXML
+    private VBox blackPlayer;
+
+    @FXML
     private Button pauseBtn;
 
     @FXML
@@ -33,13 +38,7 @@ public class ChessGame {
     private Text timer;
 
     @FXML
-    private VBox blackPlayer;
-
-    @FXML
     private Bench blackPlayerController;
-
-    @FXML
-    private VBox whitePlayer;
 
     @FXML
     private Bench whitePlayerController;
@@ -64,6 +63,9 @@ public class ChessGame {
     private ObjectProperty<Game> currentGame = new SimpleObjectProperty<>();
 
     public void initialize() {
+        whitePlayerController.setPlayer(Player.PlayerType.WHITE);
+        blackPlayerController.setPlayer(Player.PlayerType.BLACK);
+
         board = new BoardGrid(this);
         timer.setText("0:00");
         manager = new RoundManager(board);
@@ -73,8 +75,6 @@ public class ChessGame {
             if (newValue != null) {
                 manager.setGame(newValue);
                 board.setBoard(newValue.getBoard());
-                whitePlayerController.setPlayer(newValue.getWhite());
-                blackPlayerController.setPlayer(newValue.getBlack());
             }
         });
 
@@ -83,7 +83,7 @@ public class ChessGame {
 
     private final Path arrow = getArrow();
 
-    public void showPlayerAtMove(Player player) {
+    void showPlayerAtMove(Player player) {
         blackPlayerArrow.getChildren().clear();
         whitePlayerArrow.getChildren().clear();
         if (!player.isWhite()) {
@@ -94,24 +94,21 @@ public class ChessGame {
         }
     }
 
-    public void showLostFigure(Figure figure) {
+    void showLostFigure(Figure figure) {
         if (!figure.getPlayer().isWhite()) {
-            blackPlayerController.loseFigure(figure);
+            whitePlayerController.defeatedFigure(figure);
         } else if (figure.getPlayer().isWhite()) {
-            whitePlayerController.loseFigure(figure);
+            blackPlayerController.defeatedFigure(figure);
         }
     }
 
-    public void redo() {
+    @FXML
+    void redo() {
         currentGame.get().redoLastMove();
     }
 
-    public GridPane getBoardGrid() {
+    GridPane getBoardGrid() {
         return boardGrid;
-    }
-
-    public void setTimer(String time) {
-        timer.setText(time);
     }
 
     @FXML

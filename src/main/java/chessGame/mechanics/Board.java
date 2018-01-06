@@ -153,14 +153,22 @@ public class Board implements Cloneable {
     public void makeMove(PlayerMove playerMove) throws IllegalMoveException {
         if (!getAllowedMoves().contains(playerMove)) {
             System.err.println("illegal: " + playerMove);
-            throw new IllegalMoveException();
+            throw new IllegalMoveException("dieser zug ist nicht erlaubt");
+        } else if (getLastMove() != null && getLastMove().getPlayer().equals(playerMove.getPlayer())) {
+            throw new IllegalMoveException("ein spieler darf nicht zweimal hintereinander ziehen!");
         }
+
         System.out.println("Bench: " + bench);
         System.out.println("Before");
         BoardPrinter.print(this);
         move(playerMove);
         System.out.println("After");
         BoardPrinter.print(this);
+        setLastMove(playerMove);
+    }
+
+    private void setLastMove(PlayerMove lastMove) {
+        this.lastMove.set(lastMove);
     }
 
     void move(PlayerMove playerMove) throws IllegalMoveException {

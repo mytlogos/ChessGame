@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Text?>
 
-<BorderPane onKeyPressed="#handleKeyPressed" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.ChessGame">
+<BorderPane fx:id="root" onKeyPressed="#handleKeyPressed" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="chessGame.gui.ChessGame">
    <center>
        <GridPane fx:id="boardGrid" alignment="CENTER" />
    </center>

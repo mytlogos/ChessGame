@@ -103,20 +103,30 @@ public final class MoveGenerator {
         final Position to = lastMove.getMainMove().getChange().getTo();
         final int rowTo = to.getRow();
 
-        final int enemyColumn = pawn.getPosition().getColumn();
 
         final Figure enemyPawn = lastMove.getMainMove().getFigure();
+        final int enemyColumn = enemyPawn.getPosition().getColumn();
+
+        //check if pawn, if pawn is of enemy, lastMove was no castling or promotionMove
+        //last move pawn moved two fields, enemy pawn and current pawn are side by side
+        //in same row and adjacent columns
         if (enemyPawn.getType() == FigureType.PAWN
                 && lastMove.getPlayer().equals(enemy)
                 && lastMove.isNormal()
                 && lastMove.getSecondaryMove() == null
                 && Math.abs(rowFrom - rowTo) == 2
-                && Math.abs(to.getColumn() - enemyColumn) == 1) {
+                && Math.abs(pawn.getPosition().getColumn() - enemyColumn) == 1
+                && enemyPawn.getPosition().getRow() == pawn.getPosition().getRow()) {
 
-            final int max = Math.max(rowFrom, rowTo);
-            final int min = Math.min(rowFrom, rowFrom);
 
-            final PositionChange mainChange = new PositionChange(pawn.getPosition(), Position.get(max - min, enemyColumn));
+            final int row;
+            if (pawn.getPlayer().isWhite()) {
+                row = 6;
+            } else {
+                row = 3;
+            }
+
+            final PositionChange mainChange = new PositionChange(pawn.getPosition(), Position.get(row, enemyColumn));
             final Move mainMove = new Move(pawn, mainChange);
             final Move strike = new Move(enemyPawn, new PositionChange(enemyPawn.getPosition(), Position.Bench));
 
