@@ -1,7 +1,6 @@
 package chessGame.mechanics;
 
 import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.figures.FigureType;
 
 import java.util.Objects;
 
@@ -20,20 +19,27 @@ final public class Move implements Cloneable {
         this.figure = figure;
     }
 
-    public PositionChange getChange() {
-        return change;
+    public Position getFrom() {
+        return change.getFrom();
+    }
+
+    public Position getTo() {
+        return change.getTo();
     }
 
     public Figure getFigure() {
         return figure;
     }
 
-    final public Move clone(Board board) {
+    final public Move clone(AbstractBoard board) {
         final Move clonedMove = clone();
         if (clonedMove == null) {
             return null;
         }
         clonedMove.figure = board.getFigure(getFigure().getPosition());
+        if (clonedMove.figure == null) {
+            throw new NullPointerException("figure is not allowed to be null");
+        }
         return clonedMove;
     }
 
@@ -80,5 +86,9 @@ final public class Move implements Cloneable {
             return notation + to.getColumnName() + to.getRow();
 
         }
+    }
+
+    private PositionChange getChange() {
+        return change;
     }
 }

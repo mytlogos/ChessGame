@@ -58,22 +58,19 @@ public class ChessGame {
     @FXML
     private Button redoBtn;
 
-    private BoardGrid board;
-    private RoundManager manager;
+    private BoardGridManager board;
     private ObjectProperty<Game> currentGame = new SimpleObjectProperty<>();
 
     public void initialize() {
         whitePlayerController.setPlayer(Player.PlayerType.WHITE);
         blackPlayerController.setPlayer(Player.PlayerType.BLACK);
 
-        board = new BoardGrid(this);
+        board = new BoardGridManager(this);
         timer.setText("0:00");
-        manager = new RoundManager(board);
         pauseBtn.setDisable(true);
 
         currentGame.addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
-                manager.setGame(newValue);
                 board.setBoard(newValue.getBoard());
             }
         });

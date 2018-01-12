@@ -16,7 +16,7 @@ import java.io.IOException;
 /**
  *
  */
-public class LostFigureItem extends HBox{
+class FigureItem extends HBox{
 
     @FXML
     private Text lostFigureCounter;
@@ -26,7 +26,7 @@ public class LostFigureItem extends HBox{
 
     private IntegerProperty timesLost = new SimpleIntegerProperty();
 
-    LostFigureItem(FigureType figure, Player.PlayerType player) {
+    FigureItem(FigureType figure, Player.PlayerType player) {
         final FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/lostFigureItem.fxml"));
         loader.setController(this);
         loader.setRoot(this);

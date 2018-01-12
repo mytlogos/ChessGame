@@ -5,11 +5,11 @@ import java.util.Objects;
 /**
  *
  */
-public class PositionChange {
+final class PositionChange {
     private final Position from;
     private final Position to;
 
-    public PositionChange(Position from, Position to) {
+    PositionChange(Position from, Position to) {
         if (Objects.equals(from, to)) {
             System.out.println("illegal positionChange");
         }
@@ -18,11 +18,11 @@ public class PositionChange {
         this.to = to;
     }
 
-    public Position getFrom() {
+    Position getFrom() {
         return from;
     }
 
-    public Position getTo() {
+    Position getTo() {
         return to;
     }
 

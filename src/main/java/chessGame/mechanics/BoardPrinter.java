@@ -7,7 +7,7 @@ import chessGame.mechanics.figures.FigureType;
  *
  */
 public class BoardPrinter {
-    public static void print(Board board) {
+    public static void print(AbstractBoard board) {
 
         for (int row = 1; row < 9; row++) {
             StringBuilder builder = new StringBuilder();

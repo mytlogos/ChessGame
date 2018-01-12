@@ -1,6 +1,6 @@
 package chessGame.mechanics.figures;
 
-import chessGame.mechanics.Board;
+import chessGame.mechanics.AbstractBoard;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.Position;
 import javafx.beans.property.ObjectProperty;
@@ -15,7 +15,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
+ * A class representing a Chess Figure on a Board.
  *
+ * A Figure can have the same hashCode but is not necessarily equal.
+ * equal differs from hashCode in that it considers the Position of the Figure, contrary to hashCode.
  */
 public abstract class Figure implements Serializable, Comparable<Figure>, Cloneable {
     private transient ObjectProperty<Position> position = new SimpleObjectProperty<>();
@@ -23,12 +26,12 @@ public abstract class Figure implements Serializable, Comparable<Figure>, Clonea
     private static int counter;
     private final int id;
     private final FigureType type;
-    private final Player player;
-    transient Board board;
+    private Player player;
+    transient AbstractBoard board;
 
     private transient Image image;
 
-    Figure(Position position, Player player, FigureType type, Board board) {
+    Figure(Position position, Player player, FigureType type, AbstractBoard board) {
         this.board = board;
         this.player = player;
         this.type = type;
@@ -200,7 +203,7 @@ public abstract class Figure implements Serializable, Comparable<Figure>, Clonea
     public int hashCode() {
         int result = getType().hashCode();
         result = 31 * result + getPlayer().hashCode();
-        result = 31 * result + id;
+//        result = 31 * result + id;
         return result;
     }
 
@@ -219,10 +222,11 @@ public abstract class Figure implements Serializable, Comparable<Figure>, Clonea
         return image;
     }
 
-    final public Figure clone(Board board) {
+    final public Figure clone(AbstractBoard board) {
         final Figure clone = clone();
         if (clone != null) {
             clone.board = board;
+            clone.player = clone.getPlayer().isWhite() ? board.getWhite() : board.getBlack();
             return clone;
         }
         return null;

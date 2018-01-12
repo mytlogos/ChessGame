@@ -1,6 +1,6 @@
 package chessGame.mechanics.figures;
 
-import chessGame.mechanics.Board;
+import chessGame.mechanics.AbstractBoard;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.Position;
 
@@ -11,7 +11,7 @@ import java.util.List;
  *
  */
 public final class Queen extends Figure {
-    public Queen(Position position, Player player, Board board) {
+    public Queen(Position position, Player player, AbstractBoard board) {
         super(position, player, FigureType.QUEEN, board);
     }
 

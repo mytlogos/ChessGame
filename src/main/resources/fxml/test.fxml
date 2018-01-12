@@ -14,14 +14,6 @@
         <AnchorPane fx:id="right" layoutX="101.0" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="200.0" prefWidth="100.0">
          <children>
             <VBox prefHeight="200.0" prefWidth="100.0">
-               <children>
-                  <Button mnemonicParsing="false" onAction="#setNormal" text="Normal" />
-                  <Button layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#setEmpty" text="Leer" />
-                  <Button layoutX="10.0" layoutY="35.0" mnemonicParsing="false" onAction="#setHazard" text="Gefährdet" />
-                  <Button layoutX="10.0" layoutY="60.0" mnemonicParsing="false" onAction="#setEnemy" text="Gegner" />
-                  <Button layoutX="10.0" layoutY="85.0" mnemonicParsing="false" onAction="#setBlack" text="Schwarz" />
-                  <Button layoutX="10.0" layoutY="110.0" mnemonicParsing="false" onAction="#setWhite" text="Weiß" />
-               </children>
             </VBox>
          </children></AnchorPane>
     </children>

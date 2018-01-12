@@ -1,5 +1,6 @@
 package chessGame.mechanics;
 
+import chessGame.engine.EngineMove;
 import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.figures.FigureType;
 
@@ -8,14 +9,15 @@ import java.util.Objects;
 /**
  *
  */
-public final class PlayerMove implements Cloneable {
+public class PlayerMove implements Cloneable {
     private Move mainMove;
     private Move secondaryMove;
     private Move promotionMove;
     private Type type = Type.NORMAL;
 
-    public PlayerMove(Move move, Move secondaryMove) {
-        this.mainMove = move;
+    public PlayerMove(Move mainMove, Move secondaryMove) {
+        Objects.requireNonNull(mainMove);
+        this.mainMove = mainMove;
         this.secondaryMove = secondaryMove;
     }
 
@@ -57,7 +59,7 @@ public final class PlayerMove implements Cloneable {
         return kingMoveFigure.getType() != FigureType.KING ||
                 rookMoveFigure.getType() != FigureType.ROOK ||
                 !kingMoveFigure.getPlayer().equals(rookMoveFigure.getPlayer()) ||
-                Math.abs(kingMove.getChange().getTo().getColumn() - rookMove.getChange().getTo().getColumn()) != 1;
+                Math.abs(kingMove.getTo().getColumn() - rookMove.getTo().getColumn()) != 1;
     }
 
     public boolean isNormal() {
@@ -65,7 +67,8 @@ public final class PlayerMove implements Cloneable {
     }
 
     public Player getPlayer() {
-        return mainMove.getFigure().getPlayer();
+        final Figure figure = mainMove.getFigure();
+        return figure.getPlayer();
     }
 
     public Move getPromotionMove() {
@@ -88,7 +91,12 @@ public final class PlayerMove implements Cloneable {
         return secondaryMove;
     }
 
-    final public PlayerMove clone(Board board) {
+    final public EngineMove engineClone(AbstractBoard board) {
+        final PlayerMove clone = clone(board);
+        return new EngineMove(clone, board);
+    }
+
+    final public PlayerMove clone(AbstractBoard board) {
         final PlayerMove clone = clone();
         if (clone == null) {
             return null;
@@ -108,6 +116,14 @@ public final class PlayerMove implements Cloneable {
         return clone;
     }
 
+    final protected void setType(PlayerMove move) {
+        this.type = move.type;
+    }
+
+    final protected void setPromotionMove(Move promotionMove) {
+        this.promotionMove = promotionMove;
+    }
+
     @Override
     final protected PlayerMove clone() {
         try {
@@ -120,7 +136,7 @@ public final class PlayerMove implements Cloneable {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || !PlayerMove.class.isAssignableFrom(o.getClass())) return false;
 
         PlayerMove that = (PlayerMove) o;
 

@@ -2,24 +2,25 @@ package chessGame.gui;
 
 import chessGame.mechanics.*;
 import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.figures.FigureType;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.PseudoClass;
-import javafx.scene.Parent;
-import javafx.scene.layout.GridPane;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.layout.StackPane;
 
 import java.io.Serializable;
-import java.util.Objects;
+import java.util.*;
 
 /**
  *
  */
-public class FigurePosition extends StackPane implements Serializable {
+class FigurePosition extends StackPane implements Serializable {
     private final Position position;
-    private final BoardGrid boardGrid;
+    private final BoardGridManager boardGrid;
 
     private BooleanProperty enemy = new SimpleBooleanProperty() {
         @Override
@@ -67,7 +68,13 @@ public class FigurePosition extends StackPane implements Serializable {
 
     private ObjectProperty<FigureView> figureViewObjectProperty = new SimpleObjectProperty<>();
 
-    public FigurePosition(Position position, BoardGrid boardGrid) {
+    private Map<Figure, PlayerMove> acceptableMoves = new HashMap<>();
+
+    private PlayerMove castling;
+    private List<PlayerMove> promotions = new ArrayList<>();
+    private ObjectProperty<Figure> showOff = new SimpleObjectProperty<>();
+
+    FigurePosition(Position position, BoardGridManager boardGrid) {
         Objects.requireNonNull(position);
         Objects.requireNonNull(boardGrid);
 
@@ -84,42 +91,89 @@ public class FigurePosition extends StackPane implements Serializable {
         initHandler();
     }
 
+    Figure getShowOff() {
+        return showOff.get();
+    }
+
+    ObjectProperty<Figure> showOffProperty() {
+        return showOff;
+    }
+
+    void setShowOff(Figure showOff) {
+        if (showOff != null && (acceptableMoves.containsKey(showOff) || (showOff.getType() == FigureType.PAWN && !promotions.isEmpty()) || (showOff.getType() == FigureType.KING && castling != null))) {
+            this.showOff.set(showOff);
+        } else {
+            this.showOff.set(null);
+        }
+    }
+
     void moveTo(FigureView newFigureView) {
         final FigureView previousView = figureViewProperty().get();
 
         if (!newFigureView.equals(previousView)) {
             final Figure figure = newFigureView.getFigure();
 
-            if (figure != null) {
-                RoundManager.disableEffects(figure, boardGrid);
+            PlayerMove move;
+
+            if (figure.getType() == FigureType.PAWN && !promotions.isEmpty()) {
+                //check user for promotion
+                PromotionDialog dialog = new PromotionDialog(promotions);
+                final Optional<PlayerMove> optional = dialog.showAndWait();
+
+                //if promotion declined, try normal pawn move
+                move = optional.orElse(acceptableMoves.get(figure));
+
+            } else if (figure.getType() == FigureType.KING && castling != null) {
+                //check user for castling
+                move = castling;
+            } else {
+                move = acceptableMoves.get(figure);
             }
 
-            final Position to = getPosition();
-            final PositionChange currentChange = new PositionChange(newFigureView.getPosition(), to);
-
-            Move second = null;
-
-            if (previousView != null) {
-                if (previousView.getFigure().getPlayer().equals(newFigureView.getFigure().getPlayer())) {
-                    boardGrid.getPositionPane(newFigureView.getPosition()).addCurrent();
-                } else {
-                    final PositionChange previousChange = new PositionChange(previousView.getPosition(), Position.Bench);
-                    second = new Move(previousView.getFigure(), previousChange);
-                }
-            }
-
-            final Move move = new Move(newFigureView.getFigure(), currentChange);
+            //important to call this before making move, else figure will not be removed from old position
+            final Position position = newFigureView.getPosition();
             try {
-                boardGrid.getBoard().makeMove(new PlayerMove(move, second));
-                boardGrid.setChosenPosition(null);
+                if (move != null) {
+                    boardGrid.getBoard().makeMove(move);
+
+                    if (newFigureView.isDragging()) {
+                        boardGrid.getPositionPane(position).setFigure(null);
+                        boardGrid.setChosenPosition(null);
+                        setFigure(newFigureView);
+                    }
+                } else {
+                    boardGrid.getPositionPane(position).addCurrent();
+                }
             } catch (IllegalMoveException ignored) {
                 System.out.println("illegal");
-                boardGrid.getPositionPane(newFigureView.getPosition()).addCurrent();
+                boardGrid.getPositionPane(position).addCurrent();
                 //todo make a popup depicting the infringement of rules
             }
         } else {
             addCurrent();
         }
+    }
+
+    void setCastling(PlayerMove castling) {
+        this.castling = castling;
+    }
+
+    void setPromotion(List<PlayerMove> promotions) {
+        this.promotions.addAll(promotions);
+    }
+
+    void addAcceptableMove(Figure figure, PlayerMove move) {
+        acceptableMoves.put(figure, move);
+    }
+
+    void addAcceptableMove(Map<Figure, PlayerMove> move) {
+        acceptableMoves.putAll(move);
+    }
+
+    void clearAcceptableMoves() {
+        castling = null;
+        promotions.clear();
+        acceptableMoves.clear();
     }
 
     private void setColor(Position position) {
@@ -157,10 +211,10 @@ public class FigurePosition extends StackPane implements Serializable {
 
         setOnMouseDragReleased(event -> {
             final FigureView gestureSource = (FigureView) event.getGestureSource();
+
             moveTo(gestureSource);
 
             gestureSource.setDragging(false);
-            boardGrid.getBoard().atMoveFinished();
             boardGrid.getGrid().getChildren().remove(gestureSource);
             event.consume();
         });
@@ -168,10 +222,6 @@ public class FigurePosition extends StackPane implements Serializable {
 
     private void initListener() {
         figureViewProperty().addListener((observable, oldFigure, newFigure) -> {
-            /*if (oldFigure != null) {
-                getChildren().remove(oldFigure);
-            }*/
-
             if (newFigure != null) {
                 getChildren().add(newFigure);
                 newFigure.activeProperty().addListener((observable1, oldValue1, newValue1) -> {
@@ -187,84 +237,80 @@ public class FigurePosition extends StackPane implements Serializable {
 
             if (paneFigure != null) {
                 if (newValue) {
-                    RoundManager.showPositions(paneFigure.getFigure(), boardGrid);
+                    boardGrid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(paneFigure.getFigure()));
                 } else if (!paneFigure.isDragging() && !isChosen()) {
-                    RoundManager.disableEffects(paneFigure.getFigure(), boardGrid);
+                    boardGrid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(null));
                 }
             }
         });
 
-        chosenProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                RoundManager.showPositions(getFigureView().getFigure(), boardGrid);
-            } else if (getFigureView() != null){
-                RoundManager.disableEffects(getFigureView().getFigure(), boardGrid);
+        showOffProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                setEmpty();
+                //todo check for type of move
+            } else {
+                resetEffect();
             }
         });
     }
 
-    public boolean isChosen() {
+    private boolean isChosen() {
         return chosen.get();
     }
 
-    public BooleanProperty chosenProperty() {
+    private BooleanProperty chosenProperty() {
         return chosen;
     }
 
-    public void setChosen(boolean chosen) {
+    void setChosen(boolean chosen) {
         this.chosen.set(chosen);
     }
 
-    public ObjectProperty<FigureView> figureViewProperty() {
+    private ObjectProperty<FigureView> figureViewProperty() {
         return figureViewObjectProperty;
     }
 
-    public boolean isSelected() {
+    boolean isSelected() {
         return selected.get();
     }
 
-    public BooleanProperty selectedProperty() {
+    BooleanProperty selectedProperty() {
         return selected;
     }
 
-    public void setFigure(FigureView figure) {
-        FigureView old = getFigureView();
-
-        if (old != null && figure != null && old != figure && old.getFigure().getPlayer() == figure.getFigure().getPlayer()) {
-            throw new IllegalArgumentException();
-        }
+    void setFigure(FigureView figure) {
         figureViewProperty().set(figure);
     }
 
-    public void setSelected(boolean selected) {
+    void setSelected(boolean selected) {
         this.selected.set(selected);
     }
 
-    public void setEnemy() {
+    void setEnemy() {
         resetEffect();
         this.enemy.set(true);
     }
 
-    public void setEmpty() {
+    void setEmpty() {
         resetEffect();
         this.empty.set(true);
     }
 
-    public void setHazard() {
+    void setHazard() {
         this.hazard.set(true);
     }
 
-    public void resetEffect() {
+    void resetEffect() {
         this.enemy.set(false);
         this.empty.set(false);
         this.hazard.set(false);
     }
 
-    public Position getPosition() {
+    Position getPosition() {
         return position;
     }
 
-    public FigureView getFigureView() {
+    FigureView getFigureView() {
         return figureViewProperty().get();
     }
 
@@ -276,9 +322,14 @@ public class FigurePosition extends StackPane implements Serializable {
                 '}';
     }
 
-    public void addCurrent() {
+    void addCurrent() {
         if (!getChildren().contains(getFigureView())) {
             getChildren().add(getFigureView());
         }
+    }
+
+    public void clear() {
+        getChildren().clear();
+        setFigure(null);
     }
 }

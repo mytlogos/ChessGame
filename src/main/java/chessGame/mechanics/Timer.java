@@ -10,7 +10,7 @@ import javafx.util.Duration;
 /**
  *
  */
-class Timer {
+final class Timer {
     private Timeline timeline;
     private StringProperty time = new SimpleStringProperty();
     private IntegerProperty second = new SimpleIntegerProperty();
@@ -23,15 +23,19 @@ class Timer {
         bind();
     }
 
-    public void start() {
+    void start() {
         timeline.play();
     }
 
-    public void stop() {
+    void stop() {
         timeline.stop();
     }
 
-    public ReadOnlyStringProperty timeProperty() {
+    void fromStart() {
+        timeline.playFromStart();
+    }
+
+    ReadOnlyStringProperty timeProperty() {
         return time;
     }
 

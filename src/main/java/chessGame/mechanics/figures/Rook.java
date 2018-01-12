@@ -1,6 +1,6 @@
 package chessGame.mechanics.figures;
 
-import chessGame.mechanics.Board;
+import chessGame.mechanics.AbstractBoard;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.Position;
 
@@ -13,7 +13,7 @@ import java.util.List;
 public final class Rook extends Figure {
     private boolean moved;
 
-    public Rook(Position position, Player player, Board board) {
+    public Rook(Position position, Player player, AbstractBoard board) {
         super(position, player, FigureType.ROOK, board);
         positionProperty().addListener(observable -> moved = true);
     }
@@ -29,6 +29,6 @@ public final class Rook extends Figure {
     }
 
     public boolean eligibleForCastling() {
-        return moved && (getPosition().getColumn() == 8 || getPosition().getColumn() ==  1);
+        return !moved && (getPosition().getColumn() == 8 || getPosition().getColumn() ==  1);
     }
 }

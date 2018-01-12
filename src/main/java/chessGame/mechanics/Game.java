@@ -12,8 +12,8 @@ import java.util.List;
 /**
  *
  */
-public class Game {
-    public Board board;
+public final class Game {
+    private Board board;
     private Timer timer;
 
     private List<PlayerMove> movesHistory = new ArrayList<>();
@@ -26,10 +26,6 @@ public class Game {
     private BooleanProperty running = new SimpleBooleanProperty();
     private BooleanProperty paused = new SimpleBooleanProperty();
     private BooleanProperty finished = new SimpleBooleanProperty();
-
-    public Game(Board board) {
-        init(board);
-    }
 
     public Game(List<Player> players) {
         final Player player1 = players.get(0);
@@ -45,7 +41,7 @@ public class Game {
             throw new IllegalArgumentException();
         }
         init(new Board(white, black, this));
-        EngineWorker.getEngine().addGame(this);
+        EngineWorker.getEngineWorker().addGame(this);
     }
 
     private void init(Board board) {

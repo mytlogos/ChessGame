@@ -6,12 +6,12 @@ import java.util.Objects;
 /**
  *
  */
-public class AtMove {
+public final class AtMove {
     private Player player;
     private List<PlayerMove> allowedMoves;
 
 
-    public AtMove(Player player, List<PlayerMove> allowedMoves) {
+    AtMove(Player player, List<PlayerMove> allowedMoves) {
         Objects.requireNonNull(player);
         Objects.requireNonNull(allowedMoves);
 

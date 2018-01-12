@@ -8,15 +8,20 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- *
+ * Generates moves, which are allowed for the current state of the Board.
  */
 public final class MoveGenerator {
-    private Board board;
+    private AbstractBoard board;
 
-    MoveGenerator(Board board) {
+    MoveGenerator(AbstractBoard board) {
         this.board = board;
     }
 
+    /**
+     * Generates a List of {@link PlayerMove}s  for the player.
+     * @param player
+     * @return
+     */
     public List<PlayerMove> getAllowedMoves(Player player) {
         if (player == null) return new ArrayList<>();
 
@@ -29,26 +34,19 @@ public final class MoveGenerator {
         if (king == null) {
             throw new IllegalStateException();
         } else {
-            System.out.println("checking for check");
             final List<Figure> dangerFigures = getCheckFigure(king, board);
 
+            //todo check if this fork is necessary
             //check if the king is checked
             if (!dangerFigures.isEmpty()) {
                 //king is checked, proceed to get moves to get out of check
                 final Map<Figure, List<Position>> possiblePositions = possiblePositions(player, board);
                 final Stream<PlayerMove> moveStream = getOutOfCheckMoveStream(king, possiblePositions);
-                System.out.println("checked not null");
-                final List<PlayerMove> collect = getCollect(king, moveStream);
-
-                System.out.println("outOfCheckMoves: " + collect);
-                return collect;
+                return getCollect(king, moveStream);
             } else {
                 //king not checked, proceed to other moves
                 final Stream<PlayerMove> moveStream = getMoveStream(figures);
-                System.out.println("not checked not null");
-                final List<PlayerMove> collect = getCollect(king, moveStream);
-                System.out.println("normal moves: " + collect);
-                return collect;
+                return getCollect(king, moveStream);
             }
         }
     }
@@ -65,10 +63,16 @@ public final class MoveGenerator {
         return possiblePositions.
                 entrySet().
                 parallelStream().
-                flatMap(entry ->
-                        entry.getValue().stream()
-                                .map(position -> simulateOutOfCheckMove(king, entry, position))
-                                .collect(Collectors.toList()).stream());
+                flatMap(entry-> simulate(king,entry));
+    }
+
+    private Stream<PlayerMove> simulate(King king, Map.Entry<Figure, List<Position>> entry) {
+        final List<PlayerMove> moves = entry.getValue()
+                .stream()
+                .map(position -> simulateOutOfCheckMove(king, entry, position))
+                .collect(Collectors.toList());
+
+        return moves.stream();
     }
 
     private Stream<? extends PlayerMove> map(Figure figure) {
@@ -90,7 +94,7 @@ public final class MoveGenerator {
         return allowedPositions.stream().map(position -> transform(figure, position, board));
     }
 
-    private void addEnPassant(List<PlayerMove> pawnMoves, Pawn pawn, Board board) {
+    private void addEnPassant(List<PlayerMove> pawnMoves, Pawn pawn, AbstractBoard board) {
         //check for en passant move (https://en.wikipedia.org/wiki/En_passant)
         final Player enemy = board.getEnemy(pawn.getPlayer());
         final PlayerMove lastMove = board.getLastMove();
@@ -99,8 +103,8 @@ public final class MoveGenerator {
             return;
         }
 
-        final int rowFrom = lastMove.getMainMove().getChange().getFrom().getRow();
-        final Position to = lastMove.getMainMove().getChange().getTo();
+        final int rowFrom = lastMove.getMainMove().getFrom().getRow();
+        final Position to = lastMove.getMainMove().getTo();
         final int rowTo = to.getRow();
 
 
@@ -135,9 +139,9 @@ public final class MoveGenerator {
         }
     }
 
-    private void addPromotions(List<PlayerMove> pawnMoves, Pawn pawn, Board board) {
+    private void addPromotions(List<PlayerMove> pawnMoves, Pawn pawn, AbstractBoard board) {
         final List<PlayerMove> promotionAble = pawnMoves.stream().filter(move -> {
-            final Position to = move.getMainMove().getChange().getTo();
+            final Position to = move.getMainMove().getTo();
             final Figure moveFigure = move.getMainMove().getFigure();
 
             return (to.getRow() == 8 && moveFigure.getPlayer().isWhite()) ||
@@ -156,7 +160,7 @@ public final class MoveGenerator {
                         .map(promoter -> {
                             final Figure figure = move.getMainMove().getFigure();
                             final Move mainMove = new Move(figure, new PositionChange(figure.getPosition(), Position.Promoted));
-                            final Move promotionMove = new Move(promoter, new PositionChange(promoter.getPosition(), move.getMainMove().getChange().getTo()));
+                            final Move promotionMove = new Move(promoter, new PositionChange(promoter.getPosition(), move.getMainMove().getTo()));
 
                             return PlayerMove.PromotionMove(mainMove, move.getSecondaryMove(), promotionMove);
                         }))
@@ -260,7 +264,7 @@ public final class MoveGenerator {
         return empty;
     }
 
-    private PlayerMove transform(Figure figure, Position position, Board board) {
+    private PlayerMove transform(Figure figure, Position position, AbstractBoard board) {
         if (figure == null) {
             return null;
         }
@@ -280,12 +284,18 @@ public final class MoveGenerator {
         if (playerMove == null || playerMove.getMainMove().getFigure().getPlayer() != king.getPlayer()) {
             return false;
         }
-        final Board clone = board.clone();
+        final LockedBoard clone = board.cloneBoard();
         try {
             if (clone != null) {
+                final Figure clonedKing = clone.getFigure(king.getPosition());
+
+                if (clonedKing.getType() != FigureType.KING) {
+                    throw new IllegalStateException("cloned boardMap is not in same state as original");
+                }
+
                 final PlayerMove clonedMove = playerMove.clone(clone);
                 clone.move(clonedMove);
-                final List<Figure> checkFigure = getCheckFigure(king, clone);
+                final List<Figure> checkFigure = getCheckFigure(clonedKing, clone);
                 return checkFigure.isEmpty();
             }
         } catch (IllegalMoveException ignored) {
@@ -303,13 +313,13 @@ public final class MoveGenerator {
         return null;
     }
 
-    private Map<Player, List<Figure>> getPlayerFiguresMap(Board board) {
+    private Map<Player, List<Figure>> getPlayerFiguresMap(AbstractBoard board) {
         return board.figures().
                 stream().
                 collect(Collectors.groupingBy(Figure::getPlayer));
     }
 
-    private List<Figure> getCheckFigure(Figure figure, Board board) {
+    private List<Figure> getCheckFigure(Figure figure, AbstractBoard board) {
         return possiblePositions(board.getEnemy(figure.getPlayer()), board).
                 entrySet().
                 stream().
@@ -318,7 +328,7 @@ public final class MoveGenerator {
                 .collect(Collectors.toList());
     }
 
-    private Map<Figure, List<Position>> possiblePositions(Player player, Board board) {
+    private Map<Figure, List<Position>> possiblePositions(Player player, AbstractBoard board) {
         final List<Figure> figures = getPlayerFiguresMap(board).get(player);
         return figures.stream().collect(Collectors.toMap(Function.identity(), Figure::getAllowedPositions));
     }

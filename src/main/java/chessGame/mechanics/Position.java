@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  *
  */
-public class Position implements Comparable<Position>, Serializable {
+public final class Position implements Comparable<Position>, Serializable {
     private final int row;
     private final int column;
 
@@ -21,11 +21,19 @@ public class Position implements Comparable<Position>, Serializable {
         this.column = column;
     }
 
-    public static Position get(int rowIndex, int columnIndex) {
-        if (!isInBoard(rowIndex, columnIndex)) {
-            throw new IllegalArgumentException();
+    /**
+     * Creates a new Position with the given Row and Column.
+     *
+     * @param row row of the boardMap, needs to be in range of 1 <= row <= 8
+     * @param column column of the boardMap, needs to be in range of 1 <= column <= 8
+     * @return a Position Object.
+     * @throws IllegalArgumentException if row or column is not in range
+     */
+    public static Position get(int row, int column) {
+        if (!isInBoard(row, column)) {
+            throw new IllegalArgumentException("out of index: " + row + "|" + column);
         }
-        return new Position(rowIndex, columnIndex);
+        return new Position(row, column);
     }
 
     public int getRow() {

@@ -15,7 +15,7 @@ import java.util.List;
 /**
  *
  */
-public class StartDialog extends Dialog<Game> {
+class StartDialog extends Dialog<Game> {
 
     private final ComboBox<Player.PlayerType> playerTypeBox = new ComboBox<>();
     private final ComboBox<Difficulty> difficultyBox = new ComboBox<>();
@@ -97,8 +97,10 @@ public class StartDialog extends Dialog<Game> {
 
                 if (playerType == Player.PlayerType.WHITE) {
                     ai = new Player(Player.PlayerType.BLACK);
+                    ai.setDifficulty(item);
                 } else {
                     ai = new Player(Player.PlayerType.WHITE);
+                    ai.setDifficulty(item);
                 }
                 ai.setAI();
                 return List.of(human,ai);
@@ -110,6 +112,7 @@ public class StartDialog extends Dialog<Game> {
             List<Player> getPlayer(StartDialog dialog) {
                 Player player1 = new Player(Player.PlayerType.WHITE);
                 player1.setAI();
+
                 Player player2 = new Player(Player.PlayerType.BLACK);
                 player2.setAI();
                 return List.of(player1, player2);

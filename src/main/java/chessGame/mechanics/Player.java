@@ -6,32 +6,41 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  *
  */
-public class Player {
+public final class Player implements Cloneable {
     private PlayerType type;
     private boolean human = true;
     private Difficulty difficulty;
-    private ObservableList<Figure> figures = FXCollections.observableArrayList();
+    private List<Figure> figures = new ArrayList<>();
+
+    public static Player getBlack() {
+        return new Player(PlayerType.BLACK);
+    }
+
+    public static Player getWhite() {
+        return new Player(PlayerType.WHITE);
+    }
 
     public Player(PlayerType type) {
         Objects.requireNonNull(type);
         this.type = type;
-        figures.addListener((ListChangeListener<? super Figure>) observable -> {
-            if (observable.next()) {
-                if (observable.getAddedSubList().contains(null)) {
-                    System.out.println("hi");
-                }
-            }
-        });
+    }
+
+    public void setDifficulty(Difficulty difficulty) {
+        this.difficulty = difficulty;
     }
 
     public void setFigures(Collection<Figure> figures) {
-        this.figures.setAll(figures);
+        this.figures.clear();
+        this.figures.addAll(figures);
     }
 
     public Collection<Figure> getFigures() {
@@ -65,6 +74,18 @@ public class Player {
 
         Player player = (Player) o;
         return type == player.type;
+    }
+
+
+    @Override
+    public final Player clone() {
+        try {
+            final Player clone = (Player) super.clone();
+            clone.figures = new ArrayList<>();
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
     }
 
     public PlayerType getType() {
