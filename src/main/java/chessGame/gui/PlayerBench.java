@@ -3,13 +3,9 @@ package chessGame.gui;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.figures.FigureType;
-import javafx.beans.Observable;
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.ObjectBinding;
-import javafx.beans.property.*;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.image.ImageView;
@@ -18,12 +14,13 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  */
-public class Bench extends VBox {
+public class PlayerBench extends VBox {
 
     @FXML
     private Text playerName;
@@ -32,8 +29,9 @@ public class Bench extends VBox {
     private VBox lostFigureContainer;
 
     private Player.PlayerType player;
+    private Map<FigureType, LostFigureItem> lostFigureItemMap = new HashMap<>();
 
-    public Bench() {
+    public PlayerBench() {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/playerStatistics.fxml"));
         loader.setRoot(this);
         loader.setController(this);
@@ -43,18 +41,6 @@ public class Bench extends VBox {
         }
         setBackground(null);
     }
-
-    private void init() {
-        Player.PlayerType type = player == Player.PlayerType.BLACK ? Player.PlayerType.WHITE : Player.PlayerType.BLACK;
-
-        for (FigureType figureType : FigureType.values()) {
-            final LostFigureItem item = new LostFigureItem(figureType, type);
-            lostFigureItemMap.put(figureType, item);
-            lostFigureContainer.getChildren().add(item);
-        }
-    }
-
-    private Map<FigureType, LostFigureItem> lostFigureItemMap = new HashMap<>();
 
     void defeatedFigure(Figure figure) {
         lostFigureItemMap.get(figure.getType()).increment();
@@ -72,6 +58,16 @@ public class Bench extends VBox {
             playerName.setText("Spieler Weiß");
         } else {
             playerName.setText("Spieler Schwarz");
+        }
+    }
+
+    private void init() {
+        Player.PlayerType type = player == Player.PlayerType.BLACK ? Player.PlayerType.WHITE : Player.PlayerType.BLACK;
+
+        for (FigureType figureType : FigureType.values()) {
+            final LostFigureItem item = new LostFigureItem(figureType, type);
+            lostFigureItemMap.put(figureType, item);
+            lostFigureContainer.getChildren().add(item);
         }
     }
 

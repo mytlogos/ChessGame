@@ -1,8 +1,8 @@
 package chessGame.gui;
 
 
-import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.Position;
+import chessGame.mechanics.figures.Figure;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.EventHandler;
@@ -21,10 +21,8 @@ class FigureView extends ImageView {
 
     private final Cursor draggingCursor = Cursor.CLOSED_HAND;
     private final Cursor hoverCursor = Cursor.OPEN_HAND;
-
-
-    private BooleanProperty active = new SimpleBooleanProperty();
     private final EventHandler<MouseEvent> onDragDetected;
+    private BooleanProperty active = new SimpleBooleanProperty();
     private Cursor savedCursor;
     private BooleanProperty dragging = new SimpleBooleanProperty();
 
@@ -46,6 +44,10 @@ class FigureView extends ImageView {
             toFront();
         };
         initListener();
+    }
+
+    Position getPosition() {
+        return figure.getPosition();
     }
 
     private void initListener() {
@@ -83,32 +85,12 @@ class FigureView extends ImageView {
         });
     }
 
-    Figure getFigure() {
-        return figure;
-    }
-
-    Position getPosition() {
-        return figure.getPosition();
-    }
-
-    void setActive(boolean active) {
-        this.active.set(active);
-    }
-
     boolean isActive() {
         return active.get();
     }
 
-    BooleanProperty activeProperty() {
-        return active;
-    }
-
-    void setDragging(boolean dragging) {
-        this.dragging.set(dragging);
-    }
-
-    boolean isDragging() {
-        return dragging.get();
+    void setActive(boolean active) {
+        this.active.set(active);
     }
 
     void saveCursor(Cursor cursor) {
@@ -121,6 +103,14 @@ class FigureView extends ImageView {
         return savedCursor;
     }
 
+    BooleanProperty activeProperty() {
+        return active;
+    }
+
+    private BooleanProperty draggingProperty() {
+        return dragging;
+    }
+
     @Override
     public String toString() {
         return "FigureView{" +
@@ -128,6 +118,11 @@ class FigureView extends ImageView {
                 ", active=" + active.get() +
                 ", dragging=" + dragging.get() +
                 '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return getFigure().hashCode();
     }
 
     @Override
@@ -139,12 +134,15 @@ class FigureView extends ImageView {
         return getFigure().equals(that.getFigure());
     }
 
-    @Override
-    public int hashCode() {
-        return getFigure().hashCode();
+    Figure getFigure() {
+        return figure;
     }
 
-    private BooleanProperty draggingProperty() {
-        return dragging;
+    boolean isDragging() {
+        return dragging.get();
+    }
+
+    void setDragging(boolean dragging) {
+        this.dragging.set(dragging);
     }
 }

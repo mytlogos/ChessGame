@@ -1,195 +1,100 @@
 package chessGame.mechanics;
 
-import chessGame.engine.EngineWorker;
-import javafx.beans.InvalidationListener;
-import javafx.beans.property.BooleanProperty;
+import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.figures.Pawn;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
  */
-public final class Game {
-    private Board board;
-    private Timer timer;
+public interface Game {
+    void start();
 
-    private List<PlayerMove> movesHistory = new ArrayList<>();
-    private Player white;
-    private Player black;
+    List<PlayerMove> getAllowedMoves();
 
-    private Player loser;
-    private Player atMovePlayer;
+    MoveHistory getHistory();
 
-    private BooleanProperty running = new SimpleBooleanProperty();
-    private BooleanProperty paused = new SimpleBooleanProperty();
-    private BooleanProperty finished = new SimpleBooleanProperty();
+    /**
+     * Gets the Bench of the Player.
+     * A Bench holds the beaten Figures of the enemy.
+     *
+     * @return a Map of player and their figures they beat
+     */
+    Map<Player, List<Figure>> getBench();
 
-    public Game(List<Player> players) {
-        final Player player1 = players.get(0);
-        final Player player2 = players.get(1);
+    Map<Player, List<Pawn>> getPromoted();
 
-        if (player1.isWhite() && !player2.isWhite()) {
-            white = player1;
-            black = player2;
-        } else if (player2.isWhite() && !player1.isWhite()) {
-            white = player2;
-            black = player1;
-        } else {
-            throw new IllegalArgumentException();
-        }
-        init(new Board(white, black, this));
-        EngineWorker.getEngineWorker().addGame(this);
-    }
+    Player getWhite();
 
-    private void init(Board board) {
-        this.board = board;
-        initListener();
+    Player getBlack();
 
-        timer = new Timer();
-        board.buildBoard();
-    }
+    IntegerProperty roundProperty();
 
-    public Player getWhite() {
-        return white;
-    }
+    boolean makeMove(PlayerMove move) throws IllegalMoveException;
 
-    public Player getBlack() {
-        return black;
-    }
+    boolean redo();
 
-    private void initListener() {
-        board.lastMoveProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                movesHistory.add(newValue);
-            }
-        });
+    boolean simulateRedo();
 
-        board.getAllowedMoves().addListener((InvalidationListener) observable -> {
-            if (board.getAllowedMoves().isEmpty()) {
-                setLoser(board.getAtMovePlayer());
-            }
-        });
+    int getRound();
 
-        pausedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                timer.stop();
-            } else {
-                timer.start();
-            }
-        });
+    void setRound(int round);
 
-        runningProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                setFinished(false);
-                timer = new Timer();
-                timer.start();
-                board.atMovePlayerProperty().set(white);
-            } else {
-                setFinished(true);
-            }
-        });
+    void addPromoted(Pawn figure);
 
-        finishedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                timer.stop();
-                System.out.println("winner: " + getWinner());
-            }
-        });
-    }
+    void addBench(Figure figure);
 
-    public List<PlayerMove> getMovesHistory() {
-        return movesHistory;
-    }
+    PlayerMove getLastMove();
 
-    public ReadOnlyStringProperty timeProperty() {
-        return timer.timeProperty();
-    }
+    void removeFromBench(Figure figure);
 
-    public boolean isRunning() {
-        return running.get();
-    }
+    void removeFromPromoted(Pawn figure);
 
-    public BooleanProperty runningProperty() {
-        return running;
-    }
+    ObjectProperty<PlayerMove> lastMoveProperty();
 
-    public void setRunning(boolean running) {
-        this.running.set(running);
-    }
+    Player getAtMove();
 
-    public boolean isPaused() {
-        return paused.get();
-    }
+    ReadOnlyBooleanProperty finishedProperty();
 
-    public BooleanProperty pausedProperty() {
-        return paused;
-    }
+    Board getBoard();
 
-    public void setPaused(boolean paused) {
-        this.paused.set(paused);
-    }
+    void atMoveFinished();
 
-    public boolean isFinished() {
-        return finished.get();
-    }
+    void simulateAtMoveFinished();
 
-    public BooleanProperty finishedProperty() {
-        return finished;
-    }
+    void setLoser(Player player);
 
-    public void setFinished(boolean finished) {
-        this.finished.set(finished);
-    }
+    Player getEnemy(Player player);
 
-    public void restart() {
-        saveGame();
-        timer = new Timer();
-        board.buildBoard();
-        finishedProperty().set(false);
-        pausedProperty().set(false);
-        runningProperty().set(false);
-    }
+    boolean isFinished();
 
-    public Board getBoard() {
-        return board;
-    }
+    boolean isRunning();
 
-    private void saveGame() {
-        //todo save game for playing again or further review
-    }
+    void setRunning(boolean running);
 
-    public void redoLastMove() {
-        if (!movesHistory.isEmpty()) {
-            final PlayerMove move = movesHistory.get(movesHistory.size() - 1);
-            try {
-                board.makeMove(move);
-            } catch (IllegalMoveException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+    ReadOnlyBooleanProperty runningProperty();
 
-    public void setLoser(Player player) {
-        this.loser = player;
-        setRunning(false);
-    }
+    ReadOnlyStringProperty timeProperty();
 
-    public boolean isWon() {
-        return isFinished() && loser != null;
-    }
+    boolean isWon();
 
-    public boolean isDraw() {
-        return isFinished() && loser == null;
-    }
+    Player getWinner();
 
-    public Player getLoser() {
-        return loser;
-    }
+    boolean isDraw();
 
-    public Player getWinner() {
-        return white.equals(loser) ? black : black.equals(loser) ? white : null;
-    }
+    boolean isPaused();
+
+    void setPaused(boolean paused);
+
+    void decideEnd();
+
+    void nextRound();
+
+    Game copy();
 }

@@ -1,5 +1,6 @@
 package chessGame.mechanics;
 
+import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
@@ -10,49 +11,47 @@ import javafx.util.Duration;
 /**
  *
  */
-final class Timer {
+public final class Timer {
+    private final Duration duration;
     private Timeline timeline;
     private StringProperty time = new SimpleStringProperty();
-    private IntegerProperty second = new SimpleIntegerProperty();
-    private IntegerProperty minute = new SimpleIntegerProperty();
-    private IntegerProperty hour = new SimpleIntegerProperty();
+    private BooleanProperty timeUp = new SimpleBooleanProperty();
+    private ObjectProperty<Duration> timeDuration = new SimpleObjectProperty<>();
 
-    Timer() {
-        timeline = new Timeline(new KeyFrame(Duration.seconds(1), this::increment));
+    public Timer() {
+        this(Duration.INDEFINITE);
+    }
+
+    public Timer(Duration duration) {
+        if (duration.isIndefinite() || duration.equals(Duration.ZERO)) {
+            timeline = new Timeline(new KeyFrame(Duration.seconds(1), this::increment));
+            this.duration = Duration.ZERO;
+        } else {
+            timeline = new Timeline(new KeyFrame(Duration.seconds(1), this::decrement));
+            this.duration = duration;
+        }
         timeline.setCycleCount(Timeline.INDEFINITE);
+        timeDuration.set(this.duration);
         bind();
     }
 
-    void start() {
-        timeline.play();
-    }
-
-    void stop() {
-        timeline.stop();
-    }
-
-    void fromStart() {
-        timeline.playFromStart();
-    }
-
-    ReadOnlyStringProperty timeProperty() {
-        return time;
-    }
 
     private void bind() {
-        time.bind(Bindings.createStringBinding(()->{
+        time.bind(Bindings.createStringBinding(() -> {
             String time;
-            final int hour = this.hour.get();
-            final int minute = this.minute.get();
-            final int second = this.second.get();
+            Duration duration = timeDuration.get();
+            long seconds = (long) duration.toSeconds();
+            long second = seconds % 60;
+            long minute = seconds / 60;
+            long hour = minute / 60;
 
             time = getPuffedUp(second);
             time = getPuffedUp(minute) + ":" + time;
             return hour + ":" + time;
-        },second));
+        }, timeDuration));
     }
 
-    private String getPuffedUp(int second) {
+    private String getPuffedUp(long second) {
         String time;
         if (second < 10) {
             time = "0" + String.valueOf(second);
@@ -62,19 +61,42 @@ final class Timer {
         return time;
     }
 
-    private void increment(ActionEvent event) {
-        final int s = second.get();
-        if (s == 59) {
-            final int m = this.minute.get();
-            if (m == 59) {
-                minute.set(0);
-                hour.set(hour.get() + 1);
-            } else {
-                minute.set(m + 1);
-            }
-            second.set(0);
-        } else {
-            second.set(s + 1);
+    public void start() {
+        timeline.play();
+    }
+
+    public void stop() {
+        timeline.stop();
+    }
+
+    public ReadOnlyBooleanProperty timeUpProperty() {
+        return timeUp;
+    }
+
+    public void restart() {
+        timeUp.set(false);
+        timeDuration.set(duration);
+        timeline.playFromStart();
+    }
+
+    public ReadOnlyStringProperty timeProperty() {
+        return time;
+    }
+
+    private void decrement(ActionEvent actionEvent) {
+        Duration duration = timeDuration.get();
+        Duration newDuration = duration.subtract(Duration.seconds(1));
+        timeDuration.set(newDuration);
+
+        if (newDuration.lessThanOrEqualTo(Duration.ZERO)) {
+            stop();
+            timeUp.set(true);
         }
+    }
+
+    private void increment(ActionEvent event) {
+        Duration duration = timeDuration.get();
+        Duration newDuration = duration.add(Duration.seconds(1));
+        timeDuration.set(newDuration);
     }
 }

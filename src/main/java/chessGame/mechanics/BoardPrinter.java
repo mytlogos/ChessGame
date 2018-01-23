@@ -1,13 +1,13 @@
 package chessGame.mechanics;
 
+import chessGame.mechanics.Board;
 import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.figures.FigureType;
 
 /**
  *
  */
 public class BoardPrinter {
-    public static void print(AbstractBoard board) {
+    public static void print(Board board) {
 
         for (int row = 1; row < 9; row++) {
             StringBuilder builder = new StringBuilder();
@@ -17,7 +17,7 @@ public class BoardPrinter {
 
                 String text;
 
-                final Figure figure = board.getFigure(position);
+                final Figure figure = board.figureAt(position);
                 if (figure != null) {
                     final String name = figure.getType().name();
                     text = name.substring(0, 2) + "(" + (figure.getPlayer().isWhite() ? "W" : "S") + ")";

@@ -16,7 +16,7 @@ import java.io.IOException;
 /**
  *
  */
-class FigureItem extends HBox{
+class FigureItem extends HBox {
 
     @FXML
     private Text lostFigureCounter;

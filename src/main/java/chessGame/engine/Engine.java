@@ -1,28 +1,40 @@
 package chessGame.engine;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.figures.Figure;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
+import javafx.util.Duration;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * The Base Class for the Chess Engine.
  * Needs to be initialised from the JavaFX-ApplicationThread.
- * It listens to the {@link Board#atMoveProperty()} and makes a {@link PlayerMove}
+ * It listens to the {@link Game#roundProperty()} and makes a {@link PlayerMove}
  * upon an Update.
  */
-class Engine extends Service<PlayerMove> {
+public class Engine extends Service<PlayerMove> {
     final Game game;
     final Player player;
-    private Map<EngineMove, SearchItem> searchItemMap = Collections.synchronizedMap(new HashMap<>());
-    private int maxDepth;
+    int maxDepth;
+
     private final Random random = new Random();
+    private Map<EngineMove, SearchItem> searchItemMap = Collections.synchronizedMap(new HashMap<>());
+    private long nanoTime;
+
+    Engine(Game game, Player player, int maxDepth) {
+        this(game, player);
+        this.maxDepth = maxDepth;
+    }
+
+    @Override
+    public void start() {
+        nanoTime = System.nanoTime();
+        super.start();
+    }
 
     Engine(Game game, Player player) {
         Objects.requireNonNull(game);
@@ -35,45 +47,66 @@ class Engine extends Service<PlayerMove> {
         this.game = game;
         this.player = player;
 
-        game.getBoard().atMoveProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null && newValue.getPlayer() == player) {
-                System.out.println("starting up");
-                if (getState() == State.FAILED || getState() == State.SUCCEEDED) {
-                    restart();
-                } else if (getState() == State.READY) {
-                    start();
-                } else {
-                    throw new IllegalStateException("Engine wurde nicht in einem Anfangs oder EndZustand gestartet: War in Zustand: " + getState());
-                }
-            }
-        });
 
-        setOnSucceeded(event -> {
-            final PlayerMove playerMove = getValue();
-            if (playerMove == null) {
-                game.setLoser(this.player);
-            } else {
-                try {
-                    final Board board = game.getBoard();
-                    //make a move of this gameBoard on this gameBoard
-                    board.makeMove(playerMove);
-                } catch (IllegalMoveException e) {
-                    //todo show error popup
-                    e.printStackTrace();
-                }
-            }
-        });
-        setOnFailed(event -> {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setContentText("Engine für Spieler " + player.getType() + " crashed");
-            alert.show();
-            event.getSource().getException().printStackTrace();
-        });
     }
 
-    Engine(Game game, Player player, int maxDepth) {
-        this(game, player);
-        this.maxDepth = maxDepth;
+    public void processRound(Number newValue) {
+        System.out.println("new round" + newValue + "|" + player);
+        if (newValue != null && Objects.equals(game.getAtMove(), player)) {
+            System.out.println("starting up");
+            if (!Platform.isFxApplicationThread()) {
+                Platform.runLater(this::startEngine);
+            } else {
+                startEngine();
+            }
+        }
+    }
+
+    private void startEngine() {
+        if (getState() == State.FAILED || getState() == State.SUCCEEDED) {
+            restart();
+        } else if (getState() == State.READY) {
+            start();
+        } else {
+            throw new IllegalStateException("Engine wurde nicht in einem Anfangs oder EndZustand gestartet: War in Zustand: " + getState());
+        }
+    }
+
+    @Override
+    protected void succeeded() {
+        long time = System.nanoTime();
+        double seconds = Duration.millis(java.time.Duration.ofNanos(time - nanoTime).toMillis()).toSeconds();
+        System.out.println("succeeded in " + seconds + " Seconds");
+
+        if (!Platform.isFxApplicationThread()) {
+            System.out.print("");
+        }
+
+        final PlayerMove playerMove = getValue();
+        if (playerMove == null) {
+            //null means player has no valid moves anymore, but does not result automatically in ones loss, can still claim draw
+            game.decideEnd();
+        } else {
+            try {
+                //make a move of this gameBoard on this gameBoard
+                game.makeMove(playerMove);
+                game.atMoveFinished();
+                game.nextRound();
+            } catch (IllegalMoveException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Engine versuchte einen illegalen Zug durchzuführen: " + playerMove);
+                alert.show();
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    protected void failed() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText("Engine für Spieler " + player.getType() + " crashed");
+        alert.show();
+        getException().printStackTrace();
     }
 
     @Override
@@ -86,6 +119,24 @@ class Engine extends Service<PlayerMove> {
         };
     }
 
+    PlayerMove getChoice() {
+        searchItemMap.values().forEach(SearchItem::resetLevel);
+
+        final List<PlayerMove> moves = MoveGenerator.getAllowedMoves(player, game).
+                stream().
+                map(move -> move.engineClone(game.getBoard(), game)).
+                collect(Collectors.toList());
+
+
+//        final SearchItem searchItem = search(moves, maxDepth);
+        final PlayerMove searchItem = chooseMove(moves);
+        System.out.println(searchItemMap.size());
+        System.out.println(searchItem);
+        //return null or a move on the gameBoard
+//        return searchItem == null ? null : searchItem.getMove().engineClone(game.getBoard());
+        return searchItem;
+    }
+
     /**
      * Chooses a {@link PlayerMove} from a List per Random.
      *
@@ -96,24 +147,30 @@ class Engine extends Service<PlayerMove> {
         final int anInt = random.nextInt(moves.size());
         return moves.isEmpty() ? null : moves.get(anInt);
     }
+}
 
-    PlayerMove getChoice() {
-        searchItemMap.values().forEach(SearchItem::resetLevel);
-
-        final List<EngineMove> moves = game.
-                getBoard().
-                getGenerator().
-                getAllowedMoves(player).stream().
-                map(move -> move.engineClone(game.getBoard())).
-                collect(Collectors.toList());
-
-        final SearchItem searchItem = search(moves, maxDepth);
-        System.out.println(searchItemMap.size());
-        System.out.println(searchItem);
-        //return null or a move on the gameBoard
-        return searchItem == null ? null : searchItem.getMove().engineClone(game.getBoard());
-    }
-
+/* *//**
+ * Starts the pseudo implementation of the NegaMax-Algorithm.
+ *
+ * @param moves
+ * @param maxDepth
+ * @return
+ * @param playerMove move to evaluate
+ * @param parent     parent SearchItem
+ * @param depth      maxDepth of the search, representing the player atMove,
+ * @param maxDepth   maximal Search maxDepth
+ * @param playerMove move to evaluate
+ * @param parent     parent SearchItem
+ * @param depth      maxDepth of the search, representing the player atMove,
+ * @param maxDepth   maximal Search maxDepth
+ * @see #search(EngineMove, SearchItem, int, int)
+ * <p>
+ * A pseudo-derived Implementation of the NegaMax-Algorithm.
+ * @see <a href="https://de.wikipedia.org/wiki/Minimax-Algorithmus#Variante:_Der_Negamax-Algorithmus">Negamax-Algorithm Wikipedia</a>
+ * <p>
+ * A pseudo-derived Implementation of the NegaMax-Algorithm.
+ * @see <a href="https://de.wikipedia.org/wiki/Minimax-Algorithmus#Variante:_Der_Negamax-Algorithmus">Negamax-Algorithm Wikipedia</a>
+ *//*
     private SearchItem search(List<EngineMove> moves, int maxDepth) {
         return moves.stream().parallel().
                 map(move -> search(move, null, 0, maxDepth)).
@@ -122,54 +179,55 @@ class Engine extends Service<PlayerMove> {
                 orElse(null);
     }
 
-    /**
-     * An derived Implementation of the NegaMax-Algorithm.
-     *
-     * @param playerMove move to evaluate
-     * @param parent     parent SearchItem
-     * @param depth      maxDepth of the search, representing the player atMove,
-     * @param maxDepth   maximal Search maxDepth
-     * @see <a href="https://de.wikipedia.org/wiki/Minimax-Algorithmus#Variante:_Der_Negamax-Algorithmus">Negamax-Algorithm Wikipedia</a>
-     */
+    *//**
+ * A pseudo-derived Implementation of the NegaMax-Algorithm.
+ *
+ * @param playerMove move to evaluate
+ * @param parent     parent SearchItem
+ * @param depth      maxDepth of the search, representing the player atMove,
+ * @param maxDepth   maximal Search maxDepth
+ * @see <a href="https://de.wikipedia.org/wiki/Minimax-Algorithmus#Variante:_Der_Negamax-Algorithmus">Negamax-Algorithm Wikipedia</a>
+ *//*
     private SearchItem search(EngineMove playerMove, SearchItem parent, int depth, int maxDepth) {
         if (depth == maxDepth) {
             return null;
         }
-        final AbstractBoard before = playerMove.getBoard();
-        final LockedBoard after = before.cloneBoard();
+        final Board before = playerMove.getBoard();
 
-        if (!playerMove.getBoard().equals(after)) {
-            System.out.println();
-        }
-
-        final PlayerMove clonedMove = playerMove.clone(after);
-        try {
-            //should never be null
-            after.makeMove(clonedMove);
-            after.atMoveFinished();
-        } catch (IllegalMoveException ignored) {
-            //should never happen, because the playerMove is selected from legal moves
-            return null;
-        }
-
-        return createNewItem(playerMove, parent, depth, maxDepth, before, after);
+        return createNewItem(playerMove, parent, depth, maxDepth, before);
         //if it was evaluated once, use it as starting point, else evaluate new
-/*
+*//*
         if (searchItemMap.containsKey(playerMove)) {
             return useEvaluatedItem(playerMove, parent, maxDepth, after);
         } else {
             return createNewItem(playerMove, parent, maxDepth, maxDepth, before, after);
         }
-*/
+*//*
     }
 
-    private SearchItem useEvaluatedItem(EngineMove playerMove, SearchItem parent, int maxDepth, LockedBoard after) {
+    private Board getAfterMoveBoard(EngineMove playerMove) {
+        final Board after = playerMove.getBoard().clone();
+
+        final PlayerMove clonedMove = playerMove.clone(after);
+        try {
+            //should never be null
+            after.makeMove(clonedMove);
+        } catch (IllegalMoveException ignored) {
+            //should never happen, because the playerMove is selected from legal moves
+            return null;
+        }
+        return after;
+    }
+
+    private SearchItem useEvaluatedItem(EngineMove playerMove, SearchItem parent, int maxDepth) {
         System.out.println("evaluated once");
         final SearchItem searchItem = searchItemMap.get(playerMove);
 
         final int itemDepth = searchItem.getDepth();
 
         if (itemDepth < maxDepth && !searchItem.isSearching()) {
+            final Board after = getAfterMoveBoard(playerMove);
+            if (after == null) return null;
             System.out.println("maxDepth not enough");
             after.getAllowedMoves().
                     stream().parallel().
@@ -185,7 +243,10 @@ class Engine extends Service<PlayerMove> {
         }
     }
 
-    private SearchItem createNewItem(EngineMove playerMove, SearchItem parent, int depth, int maxDepth, AbstractBoard before, LockedBoard after) {
+    private SearchItem createNewItem(EngineMove playerMove, SearchItem parent, int depth, int maxDepth, Board before) {
+        final Board after = getAfterMoveBoard(playerMove);
+        if (after == null) return null;
+
         final int rating;
 
         //if maxDepth is even, startPlayer is atMove, else enemy is at move
@@ -213,12 +274,12 @@ class Engine extends Service<PlayerMove> {
     }
 
 
-    private int evaluateBoard(AbstractBoard before, LockedBoard after, PlayerMove move) {
-        final int whiteSum = getDominationSum(before, AbstractBoard::getWhite);
-        final int blackSum = getDominationSum(before, AbstractBoard::getBlack);
+    private int evaluateBoard(Board before, Board after, PlayerMove move) {
+        final int whiteSum = getDominationSum(before, Board::getWhite);
+        final int blackSum = getDominationSum(before, Board::getBlack);
 
-        final int afterWhiteSum = getDominationSum(after, AbstractBoard::getWhite);
-        final int afterBlackSum = getDominationSum(after, AbstractBoard::getBlack);
+        final int afterWhiteSum = getDominationSum(after, Board::getWhite);
+        final int afterBlackSum = getDominationSum(after, Board::getBlack);
 
         final int dominationBefore = difference(move.getPlayer().isWhite(), blackSum, whiteSum);
         final int dominationAfter = difference(move.getPlayer().isWhite(), afterBlackSum, afterWhiteSum);
@@ -242,18 +303,16 @@ class Engine extends Service<PlayerMove> {
         return result + dominationDifference;
     }
 
-    private int evaluateStrike(PlayerMove move) {
-        if (move.isNormal()) {
-            final Move secondaryMove = move.getSecondaryMove();
-            if (secondaryMove == null) {
-                return 0;
-            }
+    private int evaluateStrike(PlayerMove playerMove) {
+        if (playerMove.isNormal()) {
+            return playerMove.getSecondaryMove().map(move -> {
+                final Figure figure = move.getFigure();
 
-            final Figure figure = secondaryMove.getFigure();
+                final int size = figure.getAllowedPositions().size();
+                final int worth = figure.getType().getWorth();
+                return size * worth;
+            }).orElse(0);
 
-            final int size = figure.getAllowedPositions().size();
-            final int worth = figure.getType().getWorth();
-            return size * worth;
         }
         return 0;
     }
@@ -262,13 +321,13 @@ class Engine extends Service<PlayerMove> {
         return isWhite ? whiteSum - blackSum : blackSum - whiteSum;
     }
 
-    private int getDominationSum(AbstractBoard board, Function<AbstractBoard, Player> playerFunction) {
+    private int getDominationSum(Board board, Function<Board, Player> playerFunction) {
         final List<Figure> figures = getPlayerFigures(playerFunction.apply(board), board);
         return figures.stream().mapToInt(figure -> figure.getAllowedPositions().size()).sum();
     }
 
-    private List<Figure> getPlayerFigures(Player player, AbstractBoard board) {
+    private List<Figure> getPlayerFigures(Player player, Board board) {
         final Map<Player, List<Figure>> playerFigures = board.figures().stream().collect(Collectors.groupingBy(Figure::getPlayer));
         return playerFigures.get(player);
     }
-}
+}*/

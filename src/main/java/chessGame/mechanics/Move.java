@@ -1,5 +1,6 @@
 package chessGame.mechanics;
 
+import chessGame.mechanics.Board;
 import chessGame.mechanics.figures.Figure;
 
 import java.util.Objects;
@@ -17,6 +18,13 @@ final public class Move implements Cloneable {
 
         this.change = change;
         this.figure = figure;
+        checkState();
+    }
+
+    private void checkState() {
+        if (!Objects.equals(figure.getPosition(), getFrom())) {
+            throw new IllegalStateException("Figur sitzt nicht am richtigen Platz: " + figure + " Sollte sein: " + getFrom());
+        }
     }
 
     public Position getFrom() {
@@ -27,29 +35,54 @@ final public class Move implements Cloneable {
         return change.getTo();
     }
 
-    public Figure getFigure() {
-        return figure;
-    }
-
-    final public Move clone(AbstractBoard board) {
+    final public Move clone(Board board, Game game, boolean promoting) {
         final Move clonedMove = clone();
+
+        //should never happen, because it implements the Cloneable interface
         if (clonedMove == null) {
             return null;
         }
-        clonedMove.figure = board.getFigure(getFigure().getPosition());
+        if (promoting) {
+            if (getFigure().getPosition() == null) {
+                clonedMove.figure = getFigure().clone(board);
+            } else {
+                throw new IllegalStateException("Figure should not have a position prior to promoting");
+            }
+        } else {
+            final Position position = getFigure().getPosition();
+            if (Position.Bench.equals(position)) {
+                clonedMove.figure = game.getBench().get(getFigure().getPlayer()).
+                        stream().
+                        filter(figure1 -> figure1.equals(getFigure())).
+                        findFirst().
+                        orElse(null);
+            } else if (Position.Promoted.equals(position)) {
+                clonedMove.figure = game.getPromoted().get(getFigure().getPlayer()).
+                        stream().
+                        filter(figure1 -> figure1.equals(getFigure())).
+                        findFirst().
+                        orElse(null);
+            } else if (position != null) {
+                clonedMove.figure = board.figureAt(position);
+            } else {
+                clonedMove.figure = figure.clone(board);
+            }
+        }
         if (clonedMove.figure == null) {
             throw new NullPointerException("figure is not allowed to be null");
         }
         return clonedMove;
     }
 
+    public Figure getFigure() {
+        return figure;
+    }
+
     @Override
-    protected Move clone()  {
-        try {
-            return (Move) super.clone();
-        } catch (CloneNotSupportedException e) {
-            return null;
-        }
+    public int hashCode() {
+        int result = getChange() != null ? getChange().hashCode() : 0;
+        result = 31 * result + (getFigure() != null ? getFigure().hashCode() : 0);
+        return result;
     }
 
     @Override
@@ -64,10 +97,12 @@ final public class Move implements Cloneable {
     }
 
     @Override
-    public int hashCode() {
-        int result = getChange() != null ? getChange().hashCode() : 0;
-        result = 31 * result + (getFigure() != null ? getFigure().hashCode() : 0);
-        return result;
+    protected Move clone() {
+        try {
+            return (Move) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
     }
 
     @Override
@@ -76,7 +111,8 @@ final public class Move implements Cloneable {
         final Position from = getChange().getFrom();
         final Position to = getChange().getTo();
 
-        final String notation = figure.getType() + "(" + figure.getPlayer().getType() + ") " + from.getColumnName() + from.getRow() + "->";
+        String fromNotation = from == null ? null : from.getColumnName() + from.getRow();
+        final String notation = figure.getType() + "(" + figure.getPlayer().getType() + ") " + fromNotation + "->";
 
         if (to == Position.Bench) {
             return notation + "BENCH";

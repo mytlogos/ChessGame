@@ -1,6 +1,9 @@
 package chessGame.gui;
 
-import chessGame.mechanics.*;
+import chessGame.mechanics.Move;
+import chessGame.mechanics.Player;
+import chessGame.mechanics.PlayerMove;
+import chessGame.mechanics.Position;
 import chessGame.mechanics.figures.Figure;
 import javafx.animation.*;
 import javafx.beans.value.ChangeListener;
@@ -16,14 +19,14 @@ import java.util.function.Consumer;
 /**
  * Coordinates the {@link PlayerMove} at the gui layer.
  */
-class MoveMaker {
+class MoveAnimator {
     private final BoardGridManager grid;
     private final ChangeListener<PlayerMove> lastMoveListener = getLastMoveListener();
 
-    MoveMaker(BoardGridManager grid) {
+    MoveAnimator(BoardGridManager grid) {
         this.grid = grid;
 
-        grid.boardProperty().addListener((observable, oldValue, newValue) -> {
+        grid.gameProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 newValue.lastMoveProperty().addListener(lastMoveListener);
             }
@@ -35,30 +38,30 @@ class MoveMaker {
     }
 
     private ChangeListener<PlayerMove> getLastMoveListener() {
-        return (observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                makeMove(newValue);
-            }
-        };
+        return (observable, oldValue, newValue) -> makeMove(newValue);
     }
 
-    private void makeMove(PlayerMove move) {
-        final ParallelTransition transition;
-        if (move.isPromotion()) {
-            transition = promote(move);
-        } else if (move.isCastlingMove()) {
-            transition = castle(move);
-        } else {
-            transition = makeNormalMove(move);
+    private void makeMove(PlayerMove lastMove) {
+        if (lastMove == null) {
+            System.out.println("lastMove is null");
+            return;
         }
-        transition.setOnFinished(event -> grid.getBoard().atMoveFinished());
+
+        final ParallelTransition transition;
+        if (lastMove.isPromotion()) {
+            transition = promote(lastMove);
+        } else if (lastMove.isCastlingMove()) {
+            transition = castle(lastMove);
+        } else {
+            transition = makeNormalMove(lastMove);
+        }
+        transition.setOnFinished(event -> grid.getGame().nextRound());
         transition.play();
     }
 
-    private ParallelTransition makeNormalMove(PlayerMove move) {
-        final Move secondaryMove = move.getSecondaryMove();
+    private ParallelTransition makeNormalMove(PlayerMove playerMove) {
 
-        final Move mainMove = move.getMainMove();
+        final Move mainMove = playerMove.getMainMove();
 
         final Transition mainTransition = getNormalTransition(mainMove);
 
@@ -66,33 +69,20 @@ class MoveMaker {
         final FigurePosition currentPane = grid.getPositionPane(mainMove.getFrom());
         currentPane.toFront();
 
-
-        ParallelTransition transition;
-        if (secondaryMove != null) {
-
-            if (grid.getFigureView(move.getMainMove().getFigure()).isDragging()) {
-                final Transition secondaryTransition = doStrikeMove(secondaryMove, mainMove, Duration.INDEFINITE);
-                transition = new ParallelTransition(secondaryTransition);
+        return playerMove.getSecondaryMove().map(move -> {
+            if (grid.getFigureView(mainMove.getFigure()).isDragging()) {
+                final Transition secondaryTransition = doStrikeMove(move, mainMove, Duration.INDEFINITE);
+                return new ParallelTransition(secondaryTransition);
             } else {
-                final Transition secondaryTransition = doStrikeMove(secondaryMove, mainMove, mainTransition.getTotalDuration());
-                transition = new ParallelTransition(mainTransition, secondaryTransition);
+                final Transition secondaryTransition = doStrikeMove(move, mainMove, mainTransition.getTotalDuration());
+                return new ParallelTransition(mainTransition, secondaryTransition);
             }
-        } else {
-            if (grid.getFigureView(move.getMainMove().getFigure()).isDragging()) {
-                transition = new ParallelTransition();
-            } else {
-                transition = new ParallelTransition(mainTransition);
-            }
-        }
-        return transition;
+        }).orElse(grid.getFigureView(playerMove.getMainMove().getFigure()).isDragging() ? new ParallelTransition() : new ParallelTransition(mainTransition));
     }
 
     private ParallelTransition castle(PlayerMove move) {
-        if (move.getSecondaryMove() == null) {
-            throw new NullPointerException("sekundärer zug für Rochade ist null");
-        }
+        final Move secondaryMove = move.getSecondaryMove().orElseThrow(() -> new NullPointerException("sekundärer zug für Rochade ist null"));
 
-        final Move secondaryMove = move.getSecondaryMove();
         final Move mainMove = move.getMainMove();
 
         if (!mainMove.getFigure().getPlayer().equals(secondaryMove.getFigure().getPlayer())) {
@@ -113,8 +103,8 @@ class MoveMaker {
         return transition;
     }
 
-    private ParallelTransition promote(PlayerMove move) {
-        final Move mainMove = move.getMainMove();
+    private ParallelTransition promote(PlayerMove playerMove) {
+        final Move mainMove = playerMove.getMainMove();
 
         final Figure figure = mainMove.getFigure();
 
@@ -127,10 +117,10 @@ class MoveMaker {
             throw new IllegalStateException("board ist nicht synchron");
         }
 
-        final Move promotionMove = move.getPromotionMove();
+        final Move promotionMove = playerMove.getPromotionMove().orElseThrow(()-> new NullPointerException("promotion move is null"));
 
-        if (promotionMove == null || !promotionMove.getTo().equals(mainMove.getTo())) {
-            throw new IllegalStateException("promotionMove ist null oder hat nicht dasselbe Ziel wie der Hauptzug!");
+        if (!promotionMove.getTo().equals(mainMove.getTo())) {
+            throw new IllegalStateException("promotionMove hat nicht dasselbe Ziel wie der Hauptzug!");
         }
 
         final FigureView promotedView = grid.getFigureView(promotionMove.getFigure());
@@ -141,24 +131,15 @@ class MoveMaker {
         });
 
 
-        ParallelTransition transition;
-
-        if (move.getSecondaryMove() != null) {
-            if (grid.getFigureView(move.getMainMove().getFigure()).isDragging()) {
-                final Transition strikeTransition = doStrikeMove(move.getSecondaryMove(), mainMove, Duration.INDEFINITE);
-                transition = new ParallelTransition(strikeTransition);
+        return playerMove.getSecondaryMove().map(move -> {
+            if (grid.getFigureView(mainMove.getFigure()).isDragging()) {
+                final Transition secondaryTransition = doStrikeMove(move, mainMove, Duration.INDEFINITE);
+                return new ParallelTransition(secondaryTransition);
             } else {
-                final Transition strikeTransition = doStrikeMove(move.getSecondaryMove(), mainMove, mainTransition.getTotalDuration());
-                transition = new ParallelTransition(mainTransition, strikeTransition);
+                final Transition secondaryTransition = doStrikeMove(move, mainMove, mainTransition.getTotalDuration());
+                return new ParallelTransition(mainTransition, secondaryTransition);
             }
-        } else {
-            if (grid.getFigureView(move.getMainMove().getFigure()).isDragging()) {
-                transition = new ParallelTransition();
-            } else {
-                transition = new ParallelTransition(mainTransition);
-            }
-        }
-        return transition;
+        }).orElse(grid.getFigureView(mainMove.getFigure()).isDragging() ? new ParallelTransition() : new ParallelTransition(mainTransition));
     }
 
     private Transition doStrikeMove(Move strikeMove, Move mainMove, Duration totalDuration) {
@@ -174,7 +155,7 @@ class MoveMaker {
 
 
             final FigurePosition currentPosition = grid.getPositionPane(strikeMove.getFrom());
-            final Bench.LostFigureItem bench = grid.getChess().getBench(atMovePlayer).getContainer(strikedFigure.getType());
+            final PlayerBench.LostFigureItem bench = grid.getChess().getBench(atMovePlayer).getContainer(strikedFigure.getType());
 
             if (!secondaryFigureView.equals(currentPosition.getFigureView())) {
                 throw new IllegalStateException("board ist nicht synchron");

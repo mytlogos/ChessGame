@@ -1,7 +1,7 @@
 package chessGame.gui;
 
 import chessGame.engine.Difficulty;
-import chessGame.mechanics.Board;
+import chessGame.mechanics.ChessGame;
 import chessGame.mechanics.Game;
 import chessGame.mechanics.Player;
 import javafx.scene.control.*;
@@ -37,7 +37,7 @@ class StartDialog extends Dialog<Game> {
             if (param.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
                 final PlayMode item = playModeComboBox.getSelectionModel().getSelectedItem();
                 final List<Player> players = item.getPlayer(this);
-                return new Game(players);
+                return new ChessGame(players);
             }
             return null;
         });
@@ -103,7 +103,7 @@ class StartDialog extends Dialog<Game> {
                     ai.setDifficulty(item);
                 }
                 ai.setAI();
-                return List.of(human,ai);
+                return List.of(human, ai);
             }
 
         },

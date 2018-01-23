@@ -1,20 +1,18 @@
 package chessGame.engine;
 
-import chessGame.mechanics.AbstractBoard;
+import chessGame.mechanics.Board;
 import chessGame.mechanics.PlayerMove;
 
 /**
  *
  */
 public class EngineMove extends PlayerMove {
-    private final PlayerMove playerMove;
-    private final AbstractBoard board;
+    private final Board board;
 
-    public EngineMove(PlayerMove playerMove, AbstractBoard board) {
-        super(playerMove.getMainMove(), playerMove.getSecondaryMove());
-        this.playerMove = playerMove;
+    public EngineMove(PlayerMove playerMove, Board board) {
+        super(playerMove.getMainMove(), playerMove.getSecondaryMove().orElse(null));
         this.board = board;
-        setPromotionMove(playerMove.getPromotionMove());
+        setPromotionMove(playerMove.getPromotionMove().orElse(null));
         setType(playerMove);
     }
 
@@ -39,7 +37,7 @@ public class EngineMove extends PlayerMove {
         return result;
     }
 
-    public AbstractBoard getBoard() {
+    public Board getBoard() {
         return board;
     }
 }

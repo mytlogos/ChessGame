@@ -18,12 +18,11 @@ final class PositionChange {
         this.to = to;
     }
 
-    Position getFrom() {
-        return from;
-    }
-
-    Position getTo() {
-        return to;
+    @Override
+    public int hashCode() {
+        int result = getFrom() != null ? getFrom().hashCode() : 0;
+        result = 31 * result + (getTo() != null ? getTo().hashCode() : 0);
+        return result;
     }
 
     @Override
@@ -37,11 +36,12 @@ final class PositionChange {
         return getTo() != null ? getTo().equals(that.getTo()) : that.getTo() == null;
     }
 
-    @Override
-    public int hashCode() {
-        int result = getFrom() != null ? getFrom().hashCode() : 0;
-        result = 31 * result + (getTo() != null ? getTo().hashCode() : 0);
-        return result;
+    Position getFrom() {
+        return from;
+    }
+
+    Position getTo() {
+        return to;
     }
 
     @Override

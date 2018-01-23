@@ -16,31 +16,31 @@ public enum Difficulty {
     EASY {
         @Override
         Engine getEngine(Game game, Player player) {
-            return new Engine(game, player,1);
+            return new AlphaBetaEngine(game, player, 2);
         }
     },
     INTERMEDIATE {
         @Override
         Engine getEngine(Game game, Player player) {
-            return new Engine(game, player, 2);
+            return new AlphaBetaEngine(game, player, 4);
         }
     },
     HARD {
         @Override
         Engine getEngine(Game game, Player player) {
-            return new HardEngine(game, player);
+            return new AlphaBetaEngine(game, player, 6);
         }
     },
     PROFESSIONAL {
         @Override
         Engine getEngine(Game game, Player player) {
-            return new ProfessionalEngine(game, player);
+            return new AlphaBetaEngine(game, player, 8);
         }
     },
     KOREAN {
         @Override
         Engine getEngine(Game game, Player player) {
-            return new KoreanEngine(game, player);
+            return new AlphaBetaEngine(game, player, 10);
         }
     },;
 

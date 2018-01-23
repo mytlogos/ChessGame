@@ -7,12 +7,12 @@ import javafx.scene.image.Image;
  *
  */
 public enum FigureType {
-    PAWN(2, "/img/blackPawn.png", "/img/whitePawn.png"),
-    ROOK(8, "/img/blackRook.png", "/img/whiteRook.png"),
-    KNIGHT(12, "/img/blackKnight.png", "/img/whiteKnight.png"),
-    BISHOP(8, "/img/blackBishop.png", "/img/whiteBishop.png"),
-    QUEEN(20, "/img/blackQueen.png", "/img/whiteQueen.png"),
-    KING(100, "/img/blackKing.png", "/img/whiteKing.png");
+    PAWN(100, "/img/blackPawn.png", "/img/whitePawn.png"),
+    ROOK(310, "/img/blackRook.png", "/img/whiteRook.png"),
+    KNIGHT(320, "/img/blackKnight.png", "/img/whiteKnight.png"),
+    BISHOP(460, "/img/blackBishop.png", "/img/whiteBishop.png"),
+    QUEEN(900, "/img/blackQueen.png", "/img/whiteQueen.png"),
+    KING(0, "/img/blackKing.png", "/img/whiteKing.png");
 
     private final int worth;
     private final String black;

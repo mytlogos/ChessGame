@@ -1,14 +1,15 @@
 package chessGame.gui;
 
+import chessGame.mechanics.*;
 import chessGame.mechanics.Board;
-import chessGame.mechanics.Player;
-import chessGame.mechanics.PlayerMove;
 import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.figures.FigureType;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.layout.Pane;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
  */
 class MoveShower {
     private final BoardGridManager grid;
-    private ChangeListener<Player> atMoveChangeListener;
+    private ChangeListener<Number> roundListener;
 
     MoveShower(BoardGridManager grid) {
         this.grid = grid;
@@ -24,18 +25,15 @@ class MoveShower {
     }
 
     private void init() {
-        atMoveChangeListener = (observable, oldValue, newValue) -> {
+        roundListener = (observable, oldValue, newValue) -> prepareMoves();
+
+        grid.gameProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
-                prepareMoves();
-            }
-        };
-        grid.boardProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                newValue.atMovePlayerProperty().addListener(atMoveChangeListener);
+                newValue.roundProperty().addListener(roundListener);
             }
             if (oldValue != null) {
                 //to prevent the old board from affecting the gui just in case
-                oldValue.atMovePlayerProperty().removeListener(atMoveChangeListener);
+                oldValue.roundProperty().removeListener(roundListener);
             }
         });
 
@@ -51,15 +49,17 @@ class MoveShower {
     }
 
     private void prepareMoves() {
-        final Board board = grid.getBoard();
-        final List<PlayerMove> movesWhite = board.getGenerator().getAllowedMoves(board.getWhite());
-        final List<PlayerMove> allowedMoves = board.getGenerator().getAllowedMoves(board.getBlack());
+        Game game = grid.getGame();
+
+        final List<PlayerMove> movesWhite = MoveGenerator.getAllowedMoves(game.getWhite(), game);
+        final List<PlayerMove> allowedMoves = MoveGenerator.getAllowedMoves(game.getBlack(), game);
 
         allowedMoves.addAll(movesWhite);
+
         final Map<FigurePosition, Map<Figure, List<PlayerMove>>> map = allowedMoves.
                 stream().
                 collect(Collectors.groupingBy(
-                        move -> grid.getPositionPane(move.getMainMove().getTo()),
+                        this::getPositionPane,
                         HashMap::new,
                         Collectors.groupingBy(move -> move.getMainMove().getFigure())));
 
@@ -81,6 +81,14 @@ class MoveShower {
                 }));
             }
         });
+    }
+
+    private void showMoves(FigurePosition position) {
+        final FigureView figureView = position.getFigureView();
+        if (figureView != null) {
+            final Figure figure = figureView.getFigure();
+            grid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(figure));
+        }
     }
 
     private void setPawnMove(FigurePosition key, Figure figure, List<PlayerMove> moves) {
@@ -117,16 +125,13 @@ class MoveShower {
         }
     }
 
-    private void showMoves(FigurePosition position) {
-        final FigureView figureView = position.getFigureView();
-        if (figureView != null) {
-            final Figure figure = figureView.getFigure();
-            grid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(figure));
-        }
-    }
-
     void showArrow(Figure figure, Pane goal) {
 
+    }
+
+    private FigurePosition getPositionPane(PlayerMove playerMove) {
+        final Position to = playerMove.getPromotionMove().map(Move::getTo).orElse(playerMove.getMainMove().getTo());
+        return grid.getPositionPane(to);
     }
 
 }

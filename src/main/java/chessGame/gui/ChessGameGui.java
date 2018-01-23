@@ -1,8 +1,8 @@
 package chessGame.gui;
 
+import chessGame.mechanics.Game;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.Game;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXML;
@@ -12,9 +12,13 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.*;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
 
 import java.util.Optional;
@@ -22,42 +26,32 @@ import java.util.Optional;
 /**
  *
  */
-public class ChessGame {
+public class ChessGameGui {
+    private final Path arrow = getArrow();
     @FXML
     private VBox whitePlayer;
     @FXML
     private VBox blackPlayer;
-
     @FXML
     private Button pauseBtn;
-
     @FXML
     private Button gameChangerBtn;
-
     @FXML
     private Text timer;
-
     @FXML
-    private Bench blackPlayerController;
-
+    private PlayerBench blackPlayerController;
     @FXML
-    private Bench whitePlayerController;
-
+    private PlayerBench whitePlayerController;
     @FXML
     private Pane blackPlayerArrow;
-
     @FXML
     private Pane whitePlayerArrow;
-
     @FXML
     private Pane root;
-
     @FXML
     private GridPane boardGrid;
-
     @FXML
     private Button redoBtn;
-
     private BoardGridManager board;
     private ObjectProperty<Game> currentGame = new SimpleObjectProperty<>();
 
@@ -71,14 +65,12 @@ public class ChessGame {
 
         currentGame.addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
-                board.setBoard(newValue.getBoard());
+                board.setGame(newValue);
             }
         });
 
         redoBtn.disableProperty().bind(currentGame.isNull());
     }
-
-    private final Path arrow = getArrow();
 
     void showPlayerAtMove(Player player) {
         blackPlayerArrow.getChildren().clear();
@@ -101,11 +93,21 @@ public class ChessGame {
 
     @FXML
     void redo() {
-        currentGame.get().redoLastMove();
+        currentGame.get().redo();
     }
 
     GridPane getBoardGrid() {
         return boardGrid;
+    }
+
+    PlayerBench getBench(Player player) {
+        if (player == null) {
+            return null;
+        } else if (player.isWhite()) {
+            return whitePlayerController;
+        } else {
+            return blackPlayerController;
+        }
     }
 
     @FXML
@@ -115,16 +117,6 @@ public class ChessGame {
             event.consume();
         } else if (event.getCode() == KeyCode.ENTER) {
             board.setChosen();
-        }
-    }
-
-    Bench getBench(Player player) {
-        if (player == null) {
-            return null;
-        } else if (player.isWhite()) {
-            return whitePlayerController;
-        } else {
-            return blackPlayerController;
         }
     }
 

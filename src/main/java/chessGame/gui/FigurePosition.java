@@ -1,6 +1,8 @@
 package chessGame.gui;
 
-import chessGame.mechanics.*;
+import chessGame.mechanics.IllegalMoveException;
+import chessGame.mechanics.PlayerMove;
+import chessGame.mechanics.Position;
 import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.figures.FigureType;
 import javafx.beans.property.BooleanProperty;
@@ -8,8 +10,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.PseudoClass;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.layout.StackPane;
 
 import java.io.Serializable;
@@ -19,53 +19,43 @@ import java.util.*;
  *
  */
 class FigurePosition extends StackPane implements Serializable {
+    private final static PseudoClass EMPTY_PSEUDO_CLASS = PseudoClass.getPseudoClass("empty");
+    private final static PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
+    private final static PseudoClass ENEMY_PSEUDO_CLASS = PseudoClass.getPseudoClass("enemy");
+    private final static PseudoClass HAZARD_PSEUDO_CLASS = PseudoClass.getPseudoClass("hazard");
+    private final static PseudoClass CHOSEN_PSEUDO_CLASS = PseudoClass.getPseudoClass("chosen");
     private final Position position;
     private final BoardGridManager boardGrid;
-
     private BooleanProperty enemy = new SimpleBooleanProperty() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(ENEMY_PSEUDO_CLASS, get());
         }
     };
-
     private BooleanProperty empty = new SimpleBooleanProperty() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(EMPTY_PSEUDO_CLASS, get());
         }
     };
-
-
     private BooleanProperty hazard = new SimpleBooleanProperty() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(HAZARD_PSEUDO_CLASS, get());
         }
     };
-
-
     private BooleanProperty selected = new SimpleBooleanProperty() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, get());
         }
     };
-
-
     private BooleanProperty chosen = new SimpleBooleanProperty() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(CHOSEN_PSEUDO_CLASS, get());
         }
     };
-
-    private final static PseudoClass EMPTY_PSEUDO_CLASS = PseudoClass.getPseudoClass("empty");
-    private final static PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
-    private final static PseudoClass ENEMY_PSEUDO_CLASS = PseudoClass.getPseudoClass("enemy");
-    private final static PseudoClass HAZARD_PSEUDO_CLASS = PseudoClass.getPseudoClass("hazard");
-    private final static PseudoClass CHOSEN_PSEUDO_CLASS = PseudoClass.getPseudoClass("chosen");
-
     private ObjectProperty<FigureView> figureViewObjectProperty = new SimpleObjectProperty<>();
 
     private Map<Figure, PlayerMove> acceptableMoves = new HashMap<>();
@@ -91,12 +81,29 @@ class FigurePosition extends StackPane implements Serializable {
         initHandler();
     }
 
-    Figure getShowOff() {
-        return showOff.get();
+    @Override
+    public String toString() {
+        return "FigurePosition{" +
+                "position=" + position +
+                ", figure=" + figureViewProperty().get() +
+                '}';
     }
 
-    ObjectProperty<Figure> showOffProperty() {
-        return showOff;
+    private ObjectProperty<FigureView> figureViewProperty() {
+        return figureViewObjectProperty;
+    }
+
+    public void clear() {
+        getChildren().clear();
+        setFigure(null);
+    }
+
+    void setFigure(FigureView figure) {
+        figureViewProperty().set(figure);
+    }
+
+    Figure getShowOff() {
+        return showOff.get();
     }
 
     void setShowOff(Figure showOff) {
@@ -134,7 +141,8 @@ class FigurePosition extends StackPane implements Serializable {
             final Position position = newFigureView.getPosition();
             try {
                 if (move != null) {
-                    boardGrid.getBoard().makeMove(move);
+                    boardGrid.getGame().makeMove(move);
+                    boardGrid.getGame().atMoveFinished();
 
                     if (newFigureView.isDragging()) {
                         boardGrid.getPositionPane(position).setFigure(null);
@@ -174,6 +182,56 @@ class FigurePosition extends StackPane implements Serializable {
         castling = null;
         promotions.clear();
         acceptableMoves.clear();
+    }
+
+    boolean isSelected() {
+        return selected.get();
+    }
+
+    void setSelected(boolean selected) {
+        this.selected.set(selected);
+    }
+
+    BooleanProperty selectedProperty() {
+        return selected;
+    }
+
+    void setEnemy() {
+        resetEffect();
+        this.enemy.set(true);
+    }
+
+    void resetEffect() {
+        this.enemy.set(false);
+        this.empty.set(false);
+        this.hazard.set(false);
+    }
+
+    void setEmpty() {
+        resetEffect();
+        this.empty.set(true);
+    }
+
+    void setHazard() {
+        this.hazard.set(true);
+    }
+
+    Position getPosition() {
+        return position;
+    }
+
+    FigureView getFigureView() {
+        return figureViewProperty().get();
+    }
+
+    void addCurrent() {
+        if (!getChildren().contains(getFigureView())) {
+            getChildren().add(getFigureView());
+        }
+    }
+
+    private ObjectProperty<Figure> showOffProperty() {
+        return showOff;
     }
 
     private void setColor(Position position) {
@@ -258,78 +316,11 @@ class FigurePosition extends StackPane implements Serializable {
         return chosen.get();
     }
 
-    private BooleanProperty chosenProperty() {
-        return chosen;
-    }
-
     void setChosen(boolean chosen) {
         this.chosen.set(chosen);
     }
 
-    private ObjectProperty<FigureView> figureViewProperty() {
-        return figureViewObjectProperty;
-    }
-
-    boolean isSelected() {
-        return selected.get();
-    }
-
-    BooleanProperty selectedProperty() {
-        return selected;
-    }
-
-    void setFigure(FigureView figure) {
-        figureViewProperty().set(figure);
-    }
-
-    void setSelected(boolean selected) {
-        this.selected.set(selected);
-    }
-
-    void setEnemy() {
-        resetEffect();
-        this.enemy.set(true);
-    }
-
-    void setEmpty() {
-        resetEffect();
-        this.empty.set(true);
-    }
-
-    void setHazard() {
-        this.hazard.set(true);
-    }
-
-    void resetEffect() {
-        this.enemy.set(false);
-        this.empty.set(false);
-        this.hazard.set(false);
-    }
-
-    Position getPosition() {
-        return position;
-    }
-
-    FigureView getFigureView() {
-        return figureViewProperty().get();
-    }
-
-    @Override
-    public String toString() {
-        return "FigurePosition{" +
-                "position=" + position +
-                ", figure=" + figureViewProperty().get() +
-                '}';
-    }
-
-    void addCurrent() {
-        if (!getChildren().contains(getFigureView())) {
-            getChildren().add(getFigureView());
-        }
-    }
-
-    public void clear() {
-        getChildren().clear();
-        setFigure(null);
+    private BooleanProperty chosenProperty() {
+        return chosen;
     }
 }

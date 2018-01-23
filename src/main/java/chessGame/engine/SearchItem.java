@@ -1,35 +1,64 @@
 package chessGame.engine;
 
-import chessGame.mechanics.AbstractBoard;
-import chessGame.mechanics.LockedBoard;
+import chessGame.mechanics.Board;
 import chessGame.mechanics.PlayerMove;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  */
 class SearchItem {
-    private final AbstractBoard before;
-    private final LockedBoard after;
-    private IntegerProperty depth = new SimpleIntegerProperty();
-    private int level;
+    private final Board before;
+    private final Board after;
     private final PlayerMove move;
     private final List<SearchItem> children = new ArrayList<>();
+    private IntegerProperty depth = new SimpleIntegerProperty();
+    private int level;
     private int personalRating;
     private int maxChildRating;
     private SearchItem maxChild;
     private boolean searching;
 
-    SearchItem(AbstractBoard before, LockedBoard after, int level, PlayerMove move, int rating) {
+    SearchItem(Board before, Board after, int level, PlayerMove move, int rating) {
         this.before = before;
         this.after = after;
         this.level = level;
         this.move = move;
         this.personalRating = rating;
+    }
+
+    public int getDepth() {
+        return depth.get();
+    }
+
+    public ReadOnlyIntegerProperty depthProperty() {
+        return depth;
+    }
+
+    public int getPersonalRating() {
+        return personalRating;
+    }
+
+    public int getMaxChildRating() {
+        return maxChildRating;
+    }
+
+    @Override
+    public String toString() {
+        return "SearchItem{" +
+                "depth=" + depth.get() +
+                ", level=" + level +
+                ", move=" + move +
+                ", personalRating=" + personalRating +
+                ", maxChildRating=" + maxChildRating +
+                ", maxChild=" + maxChild +
+                ", searching=" + searching +
+                '}';
     }
 
     void addChildren(SearchItem level) {
@@ -59,19 +88,11 @@ class SearchItem {
         }
     }
 
-    public int getDepth() {
-        return depth.get();
-    }
-
-    public ReadOnlyIntegerProperty depthProperty() {
-        return depth;
-    }
-
-    AbstractBoard getAfter() {
+    Board getAfter() {
         return after;
     }
 
-    AbstractBoard getBefore() {
+    Board getBefore() {
         return before;
     }
 
@@ -107,26 +128,5 @@ class SearchItem {
         final int i = personalRating + maxChildRating;
         System.out.println("Score " + i + " for " + move);
         return i;
-    }
-
-    public int getPersonalRating() {
-        return personalRating;
-    }
-
-    public int getMaxChildRating() {
-        return maxChildRating;
-    }
-
-    @Override
-    public String toString() {
-        return "SearchItem{" +
-                "depth=" + depth.get() +
-                ", level=" + level +
-                ", move=" + move +
-                ", personalRating=" + personalRating +
-                ", maxChildRating=" + maxChildRating +
-                ", maxChild=" + maxChild +
-                ", searching=" + searching +
-                '}';
     }
 }

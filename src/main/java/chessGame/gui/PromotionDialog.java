@@ -2,14 +2,14 @@ package chessGame.gui;
 
 import chessGame.mechanics.PlayerMove;
 import chessGame.mechanics.figures.Figure;
-import javafx.scene.control.*;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import org.controlsfx.control.SegmentedButton;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -30,7 +30,7 @@ class PromotionDialog extends Dialog<PlayerMove> {
     private void init() {
         SegmentedButton button = new SegmentedButton();
         promotions.forEach(move -> {
-            final Figure figure = move.getPromotionMove().getFigure();
+            final Figure figure = move.getPromotionMove().orElseThrow(() -> new IllegalStateException("promotion is null")).getFigure();
             final Image image = figure.getType().getImage(figure.getPlayer().getType());
 
             final ToggleButton toggleButton = getToggleButton(image, move);

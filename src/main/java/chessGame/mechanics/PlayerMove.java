@@ -5,6 +5,7 @@ import chessGame.mechanics.figures.Figure;
 import chessGame.mechanics.figures.FigureType;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  *
@@ -14,11 +15,20 @@ public class PlayerMove implements Cloneable {
     private Move secondaryMove;
     private Move promotionMove;
     private Type type = Type.NORMAL;
+    private boolean strike;
+    private BoardSnapShot boardSnap;
 
     public PlayerMove(Move mainMove, Move secondaryMove) {
         Objects.requireNonNull(mainMove);
         this.mainMove = mainMove;
         this.secondaryMove = secondaryMove;
+
+        strike = secondaryMove != null && !getPlayer().equals(secondaryMove.getFigure().getPlayer());
+    }
+
+    public Player getPlayer() {
+        final Figure figure = mainMove.getFigure();
+        return figure.getPlayer();
     }
 
     public static PlayerMove PromotionMove(Move pawnMove, Move strike, Move promotion) {
@@ -35,6 +45,10 @@ public class PlayerMove implements Cloneable {
         return playerMove;
     }
 
+    private static boolean checkPromotionConditions(Move pawnMove, Move strike, Move promotion) {
+        return false;
+    }
+
     public static PlayerMove CastlingMove(Move kingMove, Move rookMove) {
         Objects.requireNonNull(kingMove);
         Objects.requireNonNull(rookMove);
@@ -48,10 +62,6 @@ public class PlayerMove implements Cloneable {
         return playerMove;
     }
 
-    private static boolean checkPromotionConditions(Move pawnMove, Move strike, Move promotion) {
-        return false;
-    }
-
     private static boolean checkCastlingConditions(Move kingMove, Move rookMove) {
         final Figure kingMoveFigure = kingMove.getFigure();
         final Figure rookMoveFigure = rookMove.getFigure();
@@ -62,66 +72,86 @@ public class PlayerMove implements Cloneable {
                 Math.abs(kingMove.getTo().getColumn() - rookMove.getTo().getColumn()) != 1;
     }
 
-    public boolean isNormal() {
-        return type == Type.NORMAL;
-    }
-
-    public Player getPlayer() {
-        final Figure figure = mainMove.getFigure();
-        return figure.getPlayer();
-    }
-
-    public Move getPromotionMove() {
-        return isPromotion() ? promotionMove : null;
-    }
-
-    public boolean isPromotion() {
-        return type == Type.PROMOTION;
-    }
-
-    public boolean isCastlingMove() {
-        return type == Type.CASTLING;
+    public boolean checkMove(Board board) {
+        return getMainMove().getFigure().checkBoard(board) &&
+                getSecondaryMove().map(move -> move.getFigure().checkBoard(board)).orElse(true) &&
+                getPromotionMove().map(move -> move.getFigure().checkBoard(board)).orElse(true);
     }
 
     public Move getMainMove() {
         return mainMove;
     }
 
-    public Move getSecondaryMove() {
-        return secondaryMove;
+    public Optional<Move> getSecondaryMove() {
+        return Optional.ofNullable(secondaryMove);
     }
 
-    final public EngineMove engineClone(AbstractBoard board) {
-        final PlayerMove clone = clone(board);
-        return new EngineMove(clone, board);
+    public Optional<Move> getPromotionMove() {
+        return Optional.ofNullable(isPromotion() ? promotionMove : null);
     }
 
-    final public PlayerMove clone(AbstractBoard board) {
-        final PlayerMove clone = clone();
-        if (clone == null) {
-            return null;
-        }
-        clone.mainMove = getMainMove().clone(board);
-        final Move secondaryMove = getSecondaryMove();
-
-        if (secondaryMove != null) {
-            clone.secondaryMove = secondaryMove.clone(board);
-        }
-
-        final Move promotionMove = getPromotionMove();
-
-        if (promotionMove != null) {
-            clone.promotionMove = promotionMove.clone(board);
-        }
-        return clone;
-    }
-
-    final protected void setType(PlayerMove move) {
-        this.type = move.type;
+    public boolean isPromotion() {
+        return type == Type.PROMOTION;
     }
 
     final protected void setPromotionMove(Move promotionMove) {
         this.promotionMove = promotionMove;
+    }
+
+    public boolean isNormal() {
+        return type == Type.NORMAL;
+    }
+
+    public boolean isCastlingMove() {
+        return type == Type.CASTLING;
+    }
+
+    final public EngineMove engineClone(Board board, Game game) {
+        final PlayerMove clone = clone(board, game);
+        return new EngineMove(clone, board);
+    }
+
+    final public PlayerMove clone(Board board, Game game) {
+        final PlayerMove clone = clone();
+        if (clone == null) {
+            return null;
+        }
+        clone.mainMove = getMainMove().clone(board, game,false);
+        getSecondaryMove().ifPresent(move -> clone.secondaryMove = move.clone(board,game, false));
+        getPromotionMove().ifPresent(move -> clone.promotionMove = move.clone(board,game, true));
+        return clone;
+    }
+
+    void setBoardSnap(BoardSnapShot boardSnap) {
+        this.boardSnap = boardSnap;
+    }
+
+    BoardSnapShot getBoardSnap() {
+        return boardSnap;
+    }
+
+    public boolean isStrike() {
+        return strike;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getMainMove() != null ? getMainMove().hashCode() : 0;
+        result = 31 * result + getSecondaryMove().map(Move::hashCode).orElse(0);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || !PlayerMove.class.isAssignableFrom(o.getClass())) return false;
+
+        PlayerMove that = (PlayerMove) o;
+
+        if (getMainMove() != null ? !getMainMove().equals(that.getMainMove()) : that.getMainMove() != null)
+            return false;
+        return getSecondaryMove().isPresent() == that.getSecondaryMove().isPresent()
+                && Objects.equals(getSecondaryMove().orElse(null), that.getSecondaryMove().orElse(null));
     }
 
     @Override
@@ -134,29 +164,16 @@ public class PlayerMove implements Cloneable {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || !PlayerMove.class.isAssignableFrom(o.getClass())) return false;
-
-        PlayerMove that = (PlayerMove) o;
-
-        if (getMainMove() != null ? !getMainMove().equals(that.getMainMove()) : that.getMainMove() != null) return false;
-        return getSecondaryMove() != null ? getSecondaryMove().equals(that.getSecondaryMove()) : that.getSecondaryMove() == null;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = getMainMove() != null ? getMainMove().hashCode() : 0;
-        result = 31 * result + (getSecondaryMove() != null ? getSecondaryMove().hashCode() : 0);
-        return result;
-    }
-
-    @Override
     public String toString() {
         return "PlayerMove{" +
-                "first=" + getMainMove() +
-                ", secondaryMove=" + getSecondaryMove() +
+                "mainMove=" + mainMove +
+                ", secondaryMove=" + getSecondaryMove().map(Move::toString).orElse(null) +
+                ", type=" + type +
                 '}';
+    }
+
+    final protected void setType(PlayerMove move) {
+        this.type = move.type;
     }
 
     private enum Type {
