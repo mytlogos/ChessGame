@@ -6,17 +6,16 @@ import java.io.Serializable;
  *
  */
 public final class Position implements Comparable<Position>, Serializable {
-    public static Position Bench = new Position(-1, -1);
-    public static Position Promoted = new Position(-2, -2);
-    private final int row;
-    private final int column;
-    private boolean isEmpty = true;
-    private boolean isDangerous;
-    private boolean isEnemy;
+    public static final Position Bench = new Position(-1);
+    public static final Position Promoted = new Position(-2);
+    public static final Position Unknown = new Position(-3);
 
-    private Position(int row, int column) {
-        this.row = row;
-        this.column = column;
+    private final int panel;
+    private int column;
+    private int row;
+
+    private Position(int panel) {
+        this.panel = panel;
     }
 
     /**
@@ -28,61 +27,35 @@ public final class Position implements Comparable<Position>, Serializable {
      * @throws IllegalArgumentException if row or column is not in range
      */
     public static Position get(int row, int column) {
-        if (!isInBoard(row, column)) {
+        int panel = convert(row, column);
+        if (!isInBoard(panel)) {
             throw new IllegalArgumentException("out of index: " + row + "|" + column);
         }
-        return new Position(row, column);
+        return get(panel);
     }
 
-    public static boolean isInBoard(int row, int column) {
-        return row >= 1 && row <= 8 && column >= 1 && column <= 8;
+    private static int convert(int row, int column) {
+        return (row - 1) * 8 + column - 1;
     }
 
-    public boolean isAlly() {
-        return !isDangerous() && !isEmpty() && !isEnemy();
+    public static boolean isInBoard(int panel) {
+        return panel >= 0 && panel <= 63;
     }
 
-    public boolean isDangerous() {
-        return isDangerous;
-    }
-
-    public boolean isEmpty() {
-        return isEmpty;
-    }
-
-    public void setEmpty(boolean empty) {
-        isEmpty = empty;
-    }
-
-    public boolean isEnemy() {
-        return isEnemy;
-    }
-
-    public void setEnemy(boolean enemy) {
-        isEnemy = enemy;
-    }
-
-    public void setDangerous(boolean dangerous) {
-        isDangerous = dangerous;
+    public static Position get(int panel) {
+        if (!isInBoard(panel)) {
+            throw new IllegalArgumentException("Not on Board! " + panel);
+        }
+        return new Position(panel);
     }
 
     public boolean isInBoard() {
-        return getRow() >= 1 && getRow() <= 8 && getColumn() >= 1 && getColumn() <= 8;
-    }
-
-    public int getRow() {
-        return row;
-    }
-
-    public int getColumn() {
-        return column;
+        return isInBoard(panel);
     }
 
     @Override
     public int hashCode() {
-        int result = getRow();
-        result = 31 * result + getColumn();
-        return result;
+        return getPanel();
     }
 
     @Override
@@ -91,23 +64,44 @@ public final class Position implements Comparable<Position>, Serializable {
         if (o == null || getClass() != o.getClass()) return false;
 
         Position position = (Position) o;
+        return getPanel() == position.getPanel();
+    }
 
-        if (getRow() != position.getRow()) return false;
-        return getColumn() == position.getColumn();
+    public int getPanel() {
+        return panel;
     }
 
     @Override
     public String toString() {
         return this == Position.Bench ? "Position{Bench}" :
                 this == Position.Promoted ? "Position{Promoted}" :
-                        "Position{" + getColumnName() + getRow() + "}";
+                        this == Position.Unknown ? "Position{Unknown}" :
+                                "Position{" + getColumnName() + getRow() + "}";
     }
 
     public String getColumnName() {
-        if (column > 8 || column < 1) {
+        if (getColumn() > 8 || getColumn() < 1) {
             throw new IllegalStateException();
         }
-        return String.valueOf((char) (column - 1 + 'A'));
+        return String.valueOf((char) (getColumn() - 1 + 'A'));
+    }
+
+    public String notation() {
+        return getColumnName() + getRow();
+    }
+
+    public int getRow() {
+        if (row == 0) {
+            row = (panel / 8) + 1;
+        }
+        return row;
+    }
+
+    public int getColumn() {
+        if (column == 0) {
+            column = (panel % 8) + 1;
+        }
+        return column;
     }
 
     @Override

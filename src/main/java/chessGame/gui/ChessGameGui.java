@@ -1,11 +1,14 @@
 package chessGame.gui;
 
-import chessGame.mechanics.Game;
+import chessGame.mechanics.Color;
 import chessGame.mechanics.Player;
-import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.game.ChessGame;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -15,11 +18,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
 import java.util.Optional;
 
@@ -28,6 +31,7 @@ import java.util.Optional;
  */
 public class ChessGameGui {
     private final Path arrow = getArrow();
+    private final ObjectProperty<ChessGame> currentGame = new SimpleObjectProperty<>();
     @FXML
     private VBox whitePlayer;
     @FXML
@@ -52,24 +56,44 @@ public class ChessGameGui {
     private GridPane boardGrid;
     @FXML
     private Button redoBtn;
-    private BoardGridManager board;
-    private ObjectProperty<Game> currentGame = new SimpleObjectProperty<>();
+    @FXML
+    private VBox chessContainer;
+
+    private BoardGridManager manager;
+    private HistoryDisplay historyDisplay;
 
     public void initialize() {
-        whitePlayerController.setPlayer(Player.PlayerType.WHITE);
-        blackPlayerController.setPlayer(Player.PlayerType.BLACK);
+        whitePlayerController.setPlayer(Color.WHITE);
+        blackPlayerController.setPlayer(Color.BLACK);
 
-        board = new BoardGridManager(this);
+        manager = new BoardGridManager(this);
         timer.setText("0:00");
         pauseBtn.setDisable(true);
 
-        currentGame.addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                board.setGame(newValue);
-            }
-        });
+        historyDisplay = new HistoryDisplay();
+        chessContainer.getChildren().add(historyDisplay);
+
+        boardGrid.widthProperty().addListener((observable, oldValue, newValue) -> System.out.println(newValue));
+
+        historyDisplay.prefWidthProperty().bind(boardGrid.widthProperty());
+        historyDisplay.maxWidthProperty().bind(boardGrid.widthProperty());
+
+        historyDisplay.gameProperty().bind(currentGame);
+        manager.gameProperty().bind(currentGame);
 
         redoBtn.disableProperty().bind(currentGame.isNull());
+    }
+
+    public void openSettings() {
+        Settings settings = new Settings();
+        manager.orientationProperty().bind(settings.whiteOrientationProperty());
+        Stage stage = new Stage();
+        stage.setScene(new Scene(settings));
+        stage.show();
+    }
+
+    public void exit() {
+        Platform.exit();
     }
 
     void showPlayerAtMove(Player player) {
@@ -83,14 +107,6 @@ public class ChessGameGui {
         }
     }
 
-    void showLostFigure(Figure figure) {
-        if (!figure.getPlayer().isWhite()) {
-            whitePlayerController.defeatedFigure(figure);
-        } else if (figure.getPlayer().isWhite()) {
-            blackPlayerController.defeatedFigure(figure);
-        }
-    }
-
     @FXML
     void redo() {
         currentGame.get().redo();
@@ -100,10 +116,8 @@ public class ChessGameGui {
         return boardGrid;
     }
 
-    PlayerBench getBench(Player player) {
-        if (player == null) {
-            return null;
-        } else if (player.isWhite()) {
+    PlayerBench getBench(boolean white) {
+        if (white) {
             return whitePlayerController;
         } else {
             return blackPlayerController;
@@ -113,10 +127,10 @@ public class ChessGameGui {
     @FXML
     private void handleKeyPressed(KeyEvent event) {
         if (event.getCode().isArrowKey()) {
-            board.moveFocus(event);
+            manager.moveFocus(event);
             event.consume();
         } else if (event.getCode() == KeyCode.ENTER) {
-            board.setChosen();
+            manager.setChosen();
         }
     }
 
@@ -142,7 +156,7 @@ public class ChessGameGui {
         path.getElements().add(lineTo6);
         path.getElements().add(lineTo7);
         path.setStrokeWidth(2);
-        path.setFill(Color.BLACK);
+        path.setFill(javafx.scene.paint.Color.BLACK);
         return path;
     }
 
@@ -175,12 +189,12 @@ public class ChessGameGui {
     }
 
     private void initGame() {
-        Dialog<Game> gameDialog = new StartDialog();
-        final Optional<Game> game = gameDialog.showAndWait();
+        Dialog<ChessGame> gameDialog = new StartDialog();
+        final Optional<ChessGame> game = gameDialog.showAndWait();
 
         currentGame.set(game.orElse(null));
 
-        final Game current = currentGame.get();
+        final ChessGame current = currentGame.get();
         if (current == null) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setContentText("Es konnte kein neues Spiel erstellt werden");

@@ -1,6 +1,6 @@
 package chessGame.engine;
 
-import chessGame.mechanics.Game;
+import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.Player;
 import javafx.application.Platform;
 
@@ -11,8 +11,8 @@ import java.util.Map;
  *
  */
 public class EngineWorker {
-    private static EngineWorker engine = new EngineWorker();
-    private Map<Game, Map<Player, Engine>> games = new HashMap<>();
+    private static final EngineWorker engine = new EngineWorker();
+    private final Map<ChessGame, Map<Player, Engine>> games = new HashMap<>();
 
     private EngineWorker() {
         if (engine != null) {
@@ -24,7 +24,7 @@ public class EngineWorker {
         return engine;
     }
 
-    public Map<Player, Engine> getEngines(Game game) {
+    public Map<Player, Engine> getEngines(ChessGame game) {
         if (!Platform.isFxApplicationThread()) {
             throw new IllegalThreadStateException("Not Called from FX-Thread");
         }
@@ -49,7 +49,7 @@ public class EngineWorker {
         return engineMap;
     }
 
-    private void processFinish(Game game, boolean finished) {
+    private void processFinish(ChessGame game, boolean finished) {
         if (finished) {
             Map<Player, Engine> engineMap = games.remove(game);
 

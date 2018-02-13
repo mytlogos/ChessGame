@@ -8,21 +8,21 @@ import java.util.Objects;
  *
  */
 public final class Player implements Cloneable {
-    private PlayerType type;
+    private final Color type;
     private boolean human = true;
     private Difficulty difficulty;
 
-    public Player(PlayerType type) {
+    private Player(Color type) {
         Objects.requireNonNull(type);
         this.type = type;
     }
 
     public static Player getBlack() {
-        return new Player(PlayerType.BLACK);
+        return new Player(Color.BLACK);
     }
 
     public static Player getWhite() {
-        return new Player(PlayerType.WHITE);
+        return new Player(Color.WHITE);
     }
 
     public void setAI() {
@@ -38,10 +38,10 @@ public final class Player implements Cloneable {
     }
 
     public boolean isWhite() {
-        return type == PlayerType.WHITE;
+        return type == Color.WHITE;
     }
 
-    public PlayerType getType() {
+    public Color getColor() {
         return type;
     }
 
@@ -64,15 +64,6 @@ public final class Player implements Cloneable {
     }
 
     @Override
-    public final Player clone() {
-        try {
-            return (Player) super.clone();
-        } catch (CloneNotSupportedException e) {
-            return null;
-        }
-    }
-
-    @Override
     public String toString() {
         return "Player{" +
                 "type=" + type +
@@ -80,11 +71,4 @@ public final class Player implements Cloneable {
                 '}';
     }
 
-    /**
-     *
-     */
-    public enum PlayerType {
-        WHITE,
-        BLACK,;
-    }
 }

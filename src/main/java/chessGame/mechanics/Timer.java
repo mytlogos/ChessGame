@@ -1,6 +1,5 @@
 package chessGame.mechanics;
 
-import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
@@ -13,10 +12,10 @@ import javafx.util.Duration;
  */
 public final class Timer {
     private final Duration duration;
-    private Timeline timeline;
-    private StringProperty time = new SimpleStringProperty();
-    private BooleanProperty timeUp = new SimpleBooleanProperty();
-    private ObjectProperty<Duration> timeDuration = new SimpleObjectProperty<>();
+    private final Timeline timeline;
+    private final StringProperty time = new SimpleStringProperty();
+    private final BooleanProperty timeUp = new SimpleBooleanProperty();
+    private final ObjectProperty<Duration> timeDuration = new SimpleObjectProperty<>();
 
     public Timer() {
         this(Duration.INDEFINITE);
@@ -43,7 +42,8 @@ public final class Timer {
             long seconds = (long) duration.toSeconds();
             long second = seconds % 60;
             long minute = seconds / 60;
-            long hour = minute / 60;
+            minute = minute % 60;
+            long hour = seconds / 3600;
 
             time = getPuffedUp(second);
             time = getPuffedUp(minute) + ":" + time;

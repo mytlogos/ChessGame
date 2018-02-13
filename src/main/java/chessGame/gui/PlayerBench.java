@@ -1,8 +1,7 @@
 package chessGame.gui;
 
-import chessGame.mechanics.Player;
-import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.figures.FigureType;
+import chessGame.mechanics.Color;
+import chessGame.mechanics.FigureType;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -28,8 +27,8 @@ public class PlayerBench extends VBox {
     @FXML
     private VBox lostFigureContainer;
 
-    private Player.PlayerType player;
-    private Map<FigureType, LostFigureItem> lostFigureItemMap = new HashMap<>();
+    private Color player;
+    private final Map<FigureType, LostFigureItem> lostFigureItemMap = new HashMap<>();
 
     public PlayerBench() {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/playerStatistics.fxml"));
@@ -42,19 +41,15 @@ public class PlayerBench extends VBox {
         setBackground(null);
     }
 
-    void defeatedFigure(Figure figure) {
-        lostFigureItemMap.get(figure.getType()).increment();
-    }
-
     LostFigureItem getContainer(FigureType figureType) {
         return lostFigureItemMap.get(figureType);
     }
 
-    void setPlayer(Player.PlayerType player) {
+    void setPlayer(Color player) {
         this.player = player;
         init();
 
-        if (player == Player.PlayerType.WHITE) {
+        if (player == Color.WHITE) {
             playerName.setText("Spieler Weiß");
         } else {
             playerName.setText("Spieler Schwarz");
@@ -62,7 +57,7 @@ public class PlayerBench extends VBox {
     }
 
     private void init() {
-        Player.PlayerType type = player == Player.PlayerType.BLACK ? Player.PlayerType.WHITE : Player.PlayerType.BLACK;
+        Color type = player == Color.BLACK ? Color.WHITE : Color.BLACK;
 
         for (FigureType figureType : FigureType.values()) {
             final LostFigureItem item = new LostFigureItem(figureType, type);
@@ -77,15 +72,19 @@ public class PlayerBench extends VBox {
 
     class LostFigureItem extends HBox {
 
+        private final FigureType figure;
+        private final Color player;
         @FXML
         private Text lostFigureCounter;
 
         @FXML
         private ImageView lostFigureView;
 
-        private IntegerProperty timesLost = new SimpleIntegerProperty();
+        private final IntegerProperty timesLost = new SimpleIntegerProperty();
 
-        LostFigureItem(FigureType figure, Player.PlayerType player) {
+        LostFigureItem(FigureType figure, Color player) {
+            this.figure = figure;
+            this.player = player;
             final FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/lostFigureItem.fxml"));
             loader.setController(this);
             loader.setRoot(this);
@@ -112,6 +111,19 @@ public class PlayerBench extends VBox {
 
         void increment() {
             timesLost.set(timesLost.get() + 1);
+        }
+
+        void decrement() {
+            timesLost.set(timesLost.get() - 1);
+        }
+
+        @Override
+        public String toString() {
+            return "LostFigureItem{" +
+                    "figure=" + figure +
+                    ", player=" + player +
+                    ", timesLost=" + timesLost +
+                    '}';
         }
     }
 }

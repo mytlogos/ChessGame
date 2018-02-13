@@ -1,12 +1,15 @@
 package chessGame.gui;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.Board;
-import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.figures.FigureType;
+import chessGame.mechanics.board.Board;
+import chessGame.mechanics.game.Game;
+import chessGame.mechanics.move.Move;
+import chessGame.mechanics.move.MoveForGenerator;
+import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.layout.Pane;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +20,6 @@ import java.util.stream.Collectors;
  */
 class MoveShower {
     private final BoardGridManager grid;
-    private ChangeListener<Number> roundListener;
 
     MoveShower(BoardGridManager grid) {
         this.grid = grid;
@@ -25,73 +27,66 @@ class MoveShower {
     }
 
     private void init() {
-        roundListener = (observable, oldValue, newValue) -> prepareMoves();
-
-        grid.gameProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                newValue.roundProperty().addListener(roundListener);
-            }
-            if (oldValue != null) {
-                //to prevent the old board from affecting the gui just in case
-                oldValue.roundProperty().removeListener(roundListener);
-            }
-        });
-
         grid.chosenPositionProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && oldValue == null) {
                 showMoves(newValue);
             } else if (newValue == null && oldValue != null) {
                 if (!oldValue.isHover()) {
-                    grid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(null));
+                    grid.getFigurePositions().forEach(boardPanel -> boardPanel.setShowOff(null));
                 }
             }
         });
     }
 
-    private void prepareMoves() {
+    void prepareMoves() {
         Game game = grid.getGame();
+        Board board = game.getBoard();
 
-        final List<PlayerMove> movesWhite = MoveGenerator.getAllowedMoves(game.getWhite(), game);
-        final List<PlayerMove> allowedMoves = MoveGenerator.getAllowedMoves(game.getBlack(), game);
+        final List<PlayerMove> movesWhite = MoveForGenerator.getAllowedMoves(game.getWhite().getColor(), game);
+        final List<PlayerMove> movesBlack = MoveForGenerator.getAllowedMoves(game.getBlack().getColor(), game);
 
+        final List<PlayerMove> allowedMoves = new ArrayList<>();
         allowedMoves.addAll(movesWhite);
+        allowedMoves.addAll(movesBlack);
 
-        final Map<FigurePosition, Map<Figure, List<PlayerMove>>> map = allowedMoves.
+        final Map<BoardPanel, Map<Figure, List<PlayerMove>>> map = allowedMoves.
                 stream().
                 collect(Collectors.groupingBy(
                         this::getPositionPane,
                         HashMap::new,
-                        Collectors.groupingBy(move -> move.getMainMove().getFigure())));
+                        Collectors.groupingBy(move -> board.figureAt(move.getMainMove().getFrom()))));
 
-        grid.getFigurePositions().forEach(FigurePosition::clearAcceptableMoves);
+        grid.getFigurePositions().forEach(BoardPanel::clearAcceptableMoves);
 
 
         map.forEach((key, value) -> {
             if (value != null) {
                 value.forEach(((figure, moves) -> {
-                    if (figure.getType() == FigureType.PAWN) {
+                    if (figure.is(FigureType.PAWN)) {
                         setPawnMove(key, figure, moves);
 
-                    } else if (figure.getType() == FigureType.KING) {
+                    } else if (figure.is(FigureType.KING)) {
                         setKingMove(key, figure, moves);
 
                     } else if (moves.size() == 1) {
                         key.addAcceptableMove(figure, moves.get(0));
+                    } else {
+                        System.err.println("too many moves: " + moves);
                     }
                 }));
             }
         });
     }
 
-    private void showMoves(FigurePosition position) {
+    private void showMoves(BoardPanel position) {
         final FigureView figureView = position.getFigureView();
         if (figureView != null) {
             final Figure figure = figureView.getFigure();
-            grid.getFigurePositions().forEach(figurePosition -> figurePosition.setShowOff(figure));
+            grid.getFigurePositions().forEach(boardPanel -> boardPanel.setShowOff(figure));
         }
     }
 
-    private void setPawnMove(FigurePosition key, Figure figure, List<PlayerMove> moves) {
+    private void setPawnMove(BoardPanel key, Figure figure, List<PlayerMove> moves) {
         final List<PlayerMove> promotions = moves.stream().filter(PlayerMove::isPromotion).collect(Collectors.toList());
         moves.removeAll(promotions);
 
@@ -99,10 +94,10 @@ class MoveShower {
             key.addAcceptableMove(figure, moves.get(0));
         }
 
-        key.setPromotion(promotions);
+        key.setPromotion(promotions, figure);
     }
 
-    private void setKingMove(FigurePosition key, Figure figure, List<PlayerMove> moves) {
+    private void setKingMove(BoardPanel key, Figure figure, List<PlayerMove> moves) {
         if (moves.size() == 2) {
             final PlayerMove firstMove = moves.get(0);
             final PlayerMove secondMove = moves.get(1);
@@ -129,7 +124,7 @@ class MoveShower {
 
     }
 
-    private FigurePosition getPositionPane(PlayerMove playerMove) {
+    private BoardPanel getPositionPane(PlayerMove playerMove) {
         final Position to = playerMove.getPromotionMove().map(Move::getTo).orElse(playerMove.getMainMove().getTo());
         return grid.getPositionPane(to);
     }

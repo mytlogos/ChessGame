@@ -1,7 +1,7 @@
 package chessGame.gui;
 
-import chessGame.mechanics.PlayerMove;
-import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.FigureType;
+import chessGame.mechanics.move.PlayerMove;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.ToggleButton;
@@ -14,11 +14,11 @@ import java.util.List;
 /**
  *
  */
-class PromotionDialog extends Dialog<PlayerMove> {
+public class PromotionDialog extends Dialog<PlayerMove> {
 
     private final List<PlayerMove> promotions;
 
-    PromotionDialog(List<PlayerMove> promotions) {
+    public PromotionDialog(List<PlayerMove> promotions) {
         if (!promotions.stream().allMatch(PlayerMove::isPromotion)) {
             throw new IllegalArgumentException("Es ist ein Zug dabei der keine Beförderung eines Bauerns ist.");
         }
@@ -29,14 +29,19 @@ class PromotionDialog extends Dialog<PlayerMove> {
 
     private void init() {
         SegmentedButton button = new SegmentedButton();
+
         promotions.forEach(move -> {
-            final Figure figure = move.getPromotionMove().orElseThrow(() -> new IllegalStateException("promotion is null")).getFigure();
-            final Image image = figure.getType().getImage(figure.getPlayer().getType());
+            final FigureType figure = move.getPromotionMove().orElseThrow(() -> new IllegalStateException("promotion is null")).getFigure();
+            final Image image = figure.getImage(move.getColor());
 
             final ToggleButton toggleButton = getToggleButton(image, move);
+            toggleButton.setPrefSize(50, 50);
             button.getButtons().add(toggleButton);
         });
+
         getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
+        getDialogPane().setContent(button);
+        setResultConverter(type-> null);
     }
 
     private ToggleButton getToggleButton(Image image, PlayerMove move) {

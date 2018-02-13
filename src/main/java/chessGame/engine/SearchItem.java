@@ -1,7 +1,7 @@
 package chessGame.engine;
 
-import chessGame.mechanics.Board;
-import chessGame.mechanics.PlayerMove;
+import chessGame.mechanics.board.Board;
+import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -17,9 +17,9 @@ class SearchItem {
     private final Board after;
     private final PlayerMove move;
     private final List<SearchItem> children = new ArrayList<>();
-    private IntegerProperty depth = new SimpleIntegerProperty();
+    private final IntegerProperty depth = new SimpleIntegerProperty();
     private int level;
-    private int personalRating;
+    private final int personalRating;
     private int maxChildRating;
     private SearchItem maxChild;
     private boolean searching;

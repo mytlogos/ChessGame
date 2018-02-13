@@ -1,22 +1,15 @@
 package chessGame.engine;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.Board;
-import chessGame.mechanics.Game;
-import chessGame.mechanics.figures.Figure;
-import chessGame.mechanics.figures.FigureType;
-import chessGame.mechanics.figures.King;
-import impl.org.controlsfx.tools.MathTools;
-import javafx.beans.property.ObjectProperty;
+import chessGame.mechanics.board.Board;
+import chessGame.mechanics.game.ChessGameImpl;
+import chessGame.mechanics.game.ChessGame;
+import chessGame.mechanics.game.SimulationGame;
+import chessGame.mechanics.game.SimulationGameImpl;
+import chessGame.mechanics.move.*;
+import javafx.util.Duration;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -24,95 +17,74 @@ import java.util.stream.Collectors;
  */
 class AlphaBetaEngine extends Engine {
     private PlayerMove best;
+    private int alphaBetaCounter;
 
-    AlphaBetaEngine(Game game, Player player, int maxDepth) {
+    AlphaBetaEngine(ChessGame game, Player player, int maxDepth) {
         super(game, player, maxDepth);
     }
 
     @Override
     PlayerMove getChoice() {
-        final Board board = game.getBoard();
+        long nanoTime = System.nanoTime();
 
-        final List<PlayerMove> allowedMoves = MoveGenerator.getAllowedMoves(game.getAtMove(), game);
+        final List<PlayerMove> allowedMoves = game.getAllowedMoves();
+        SimulationGame game = this.game.getSimulation();
 
         if (allowedMoves.isEmpty()) {
             return null;
         }
-        //use clone to avoid triggering unwanted things
-//        final Board clone = board.clone();
-        //use simulate to avoid triggering the listener bound to gui
-//        board.setPlaying(true);
-        int rating = alphaBeta(board, maxDepth, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
+        int rating = alphaBeta(game, maxDepth, maxDepth, Integer.MIN_VALUE, Integer.MAX_VALUE);
 
-        System.out.println("Rating " + rating +  " for " + best);
-        if (best == null) {
-            System.out.println("failed?");
-        }
-        System.out.println("counted: " + alphaBetaCounter);
-        double moveAv = movesTime.stream().mapToLong(Long::longValue).average().orElse(0);
-        double redoAv = redosTime.stream().mapToLong(Long::longValue).average().orElse(0);
-        double evalAv = evalTime.stream().mapToLong(Long::longValue).average().orElse(0);
+        long time = System.nanoTime();
+        double seconds = Duration.millis(java.time.Duration.ofNanos(time - nanoTime).toMillis()).toSeconds();
 
-        BigDecimal moves = BigDecimal.valueOf(moveAv / 1_000_000d).setScale(3, RoundingMode.HALF_EVEN);
-        BigDecimal redos = BigDecimal.valueOf(redoAv / 1_000_000d).setScale(3, RoundingMode.HALF_EVEN);
-        BigDecimal evals = BigDecimal.valueOf(evalAv  / 1_000_000d).setScale(3, RoundingMode.HALF_EVEN);
-
-        moveAv = moves.doubleValue();
-        redoAv = redos.doubleValue();
-        evalAv = evals.doubleValue();
-        System.out.println("Moves Average: " + moveAv + " ms | RedoAverage: " + redoAv + " ms  | EvalAverage: " + evalAv + " ms");
+        printInfo(rating, seconds);
 
         return best == null ? chooseMove(allowedMoves) : best;
     }
 
-    private int alphaBetaCounter;
-    private List<Long> movesTime = new ArrayList<>();
-    private List<Long> redosTime = new ArrayList<>();
-    private List<Long> evalTime = new ArrayList<>();
+    private void printInfo(int rating, double seconds) {
+        System.out.println("Rating " + rating + " for " + best);
+        if (best == null) {
+            System.out.println("failed?");
+        }
+        System.out.println("counted: " + alphaBetaCounter);
+        System.out.println("succeeded in " + seconds + " seconds");
+        alphaBetaCounter = 0;
+    }
 
-    private int alphaBeta(Board board, int maxDepth, int depth, int alpha, int beta) {
+    private int alphaBeta(SimulationGame game, int maxDepth, int depth, int alpha, int beta) {
         alphaBetaCounter++;
+        final List<PlayerMove> moves = new ArrayList<>(MoveForGenerator.getAllowedMoves(game.getAtMove().getColor(), game));
 
-        final List<PlayerMove> moves = new ArrayList<>(game.getAllowedMoves());
-        if (depth == 0 || moves.isEmpty()) {
-            long before = System.nanoTime();
-            int evaluate = evaluate(board);
-            long after = System.nanoTime();
-            evalTime.add(after - before);
-            return evaluate;
+        if (moves.isEmpty()) {
+            return evaluate(game);
         }
 
+        if (depth == 0) {
+            return evaluate(game);
+        }
 
         //sort the moves after the values of their figures
-        moves.sort(Comparator.comparingInt(this::worth));
+        moves.sort(Comparator.comparingDouble(this::worth).reversed());
 
         int max = alpha;
         for (PlayerMove move : moves) {
-            try {
-                long beforeMove = System.nanoTime();
-                game.makeMove(move);
-                long afterMove = System.nanoTime();
-                movesTime.add(afterMove - beforeMove);
-                game.simulateAtMoveFinished();
-                int worth = -alphaBeta(board, maxDepth, depth - 1, negate(beta), negate(max));
-                long beforeRedo = System.nanoTime();
-                game.simulateRedo();
-                long afterRedo = System.nanoTime();
-                redosTime.add(afterRedo - beforeRedo);
+            game.setAllowedMoves(moves);
+            game.makeMove(move);
 
-                if (worth > max) {
-                    max = worth;
+            int worth = -alphaBeta(game, maxDepth, depth - 1, negate(beta), negate(max));
+            game.singlePlyRedo();
 
-                    if (max >= beta) {
-                        break;
-                    }
-                    if (depth == maxDepth) {
-                        best = move;
-                    }
+            if (worth > max) {
+                max = worth;
+
+                if (max >= beta) {
+                    break;
                 }
-            } catch (IllegalMoveException e) {
-                e.printStackTrace();
-                return Integer.MIN_VALUE;
+                if (depth == maxDepth) {
+                    best = move;
+                }
             }
         }
         return max;
@@ -131,21 +103,22 @@ class AlphaBetaEngine extends Engine {
     }
 
     /**
+     *
+     *
      * @param playerMove
      * @return
      */
-    private int worth(PlayerMove playerMove) {
+    private double worth(PlayerMove playerMove) {
         final Move mainMove = playerMove.getMainMove();
-        int worth = mainMove.getFigure().getType().getWorth();
+        double worth = mainMove.getFigure().getWorth();
 
-        final Integer secondaryWorth = playerMove.getSecondaryMove().map(move -> move.getFigure().getType().getWorth()).orElse(0);
-        worth += secondaryWorth;
+        final Double secondaryWorth = playerMove.getSecondaryMove().map(move -> move.getFigure().getWorth()).orElse(0d);
+        worth = worth + secondaryWorth * 10;
 
-        final Integer promotionWorth = playerMove.getPromotionMove().map(move -> move.getFigure().getType().getWorth()).orElse(0);
+        final Double promotionWorth = playerMove.getPromotionMove().map(move -> move.getFigure().getWorth()).orElse(0d);
         worth += promotionWorth;
 
-        double worthInPawnUnits = worth / 100d;
-        return (int) Math.round(worthInPawnUnits);
+        return worth;
     }
 
     /**
@@ -154,131 +127,94 @@ class AlphaBetaEngine extends Engine {
      * A Board which evaluates to a Draw will be subtracted 500 points, if it evaluates to a Win
      * 2000 points will be added.
      *
-     * @param board board to evaluate
+     * @param game game with board to evaluate
      * @return board evaluation in point of view of the drawing/moving player
      */
-    private int evaluate(Board board) {
-        final List<Figure> blackFigures = board.getFigures(game.getBlack());
-        final List<Figure> whiteFigures = board.getFigures(game.getWhite());
+    private int evaluate(SimulationGame game) {
+        Board board = game.getBoard();
 
-        final Player atMovePlayer = game.getAtMove();
-        Player player = atMovePlayer == null ? game.getEnemy(game.getLastMove().getPlayer()) : atMovePlayer;
+        Map<Color, List<Figure>> playerFigures = board.getPlayerFigures();
 
-        final int figureWorthDiff = getFigureWorthDiff(blackFigures, whiteFigures, player);
+        final Color player = game.getAtMove().getColor();
+
+        List<Figure> atMoveFigures = playerFigures.get(player);
+        List<Figure> notAtMoveFigures = playerFigures.get(Color.getEnemy(player));
+
+
+        final int figureWorthDiff = getFigureWorthDiff(atMoveFigures, notAtMoveFigures);
         final int benchWorthDiff = getBenchWorthDiff(player);
         int eval = figureWorthDiff + benchWorthDiff;
 
-//        List<Figure> atMoveFigures = board.getFigures(player);
-//        List<Figure> notAtMoveFigures = board.getFigures(board.getEnemy(player));
+        List<Position> atMovePosition = getAllPositions(board, atMoveFigures);
+        List<Position> notAtMovePosition = getAllPositions(board, notAtMoveFigures);
 
-//        List<Position> atMovePosition = getAllPositions(board, atMoveFigures);
-//        List<Position> notAtMovePosition = getAllPositions(board, notAtMoveFigures);
+        //the sum of the figures which are on board and in check from enemy
+        double atMoveCheckSum = positionSum(board, atMoveFigures, notAtMovePosition);
+        double notAtMoveCheckSum = positionSum(board, atMoveFigures, atMovePosition);
 
-//        int checkSum = atMoveFigures.stream().filter(figure -> notAtMovePosition.contains(figure.getPosition())).mapToInt(figure -> figure.getType().getWorth()).sum();
-//        int guardSum = atMoveFigures.stream().filter(figure -> notAtMovePosition.contains(figure.getPosition())).mapToInt(figure -> figure.getType().getWorth()).sum();
+        //the sum of the figures which are on board and are guarded by own
+        double atMoveGuardSum = positionSum(board, atMoveFigures, atMovePosition);
+        double notAtMoveGuardSum = positionSum(board, notAtMoveFigures, notAtMovePosition);
 
-        int fiftyMoves = checkFiftyMovesRule(game.getHistory());
-        eval += fiftyMoves;
+        int figureRelations = (int) (atMoveGuardSum - atMoveCheckSum + notAtMoveCheckSum - notAtMoveGuardSum);
+        eval += figureRelations;
 
-        int threeRep = checkThreeRepRule(game.getHistory(), board);
-        eval += threeRep;
 
-        if (MoveGenerator.getAllowedMoves(game.getEnemy(player), game).isEmpty()) {
-            King king = board.getKing(player);
+        //end game evaluation
+        RuleEvaluator.End end = RuleEvaluator.checkEndGame(game, player);
 
-            //player at move has no legal moves, but king is not in check results in a draw
-            if (MoveGenerator.isInCheck(king, board, game)) {
-                int winBonus = 2000;
-                eval += winBonus;
-            } else {
-                int drawMali = -500;
-                eval += drawMali;
-            }
+        if (end == RuleEvaluator.End.WIN) {
+            eval += winBonus;
+        } else if (end == RuleEvaluator.End.DRAW) {
+            eval += drawMali;
+        }else {
+            //game has not ended, but could end if draw can be claimed
+            eval += RuleEvaluator.canClaimDraw(game) ? drawMali : 0;
         }
         return eval;
     }
 
-    private int getBenchWorthDiff(Player atMovePlayer) {
-        final int benchWorthDiff;
+    private double positionSum(Board board, List<Figure> atMoveFigures, List<Position> notAtMovePosition) {
+        return atMoveFigures.stream().filter(figure -> notAtMovePosition.contains(board.positionOf(figure))).mapToDouble(figure -> figure.getType().getWorth()).sum();
+    }
+
+    private List<Position> getAllPositions(Board board, List<Figure> atMoveFigures) {
+        return atMoveFigures.stream().flatMap(figure -> PositionGenerator.getAllowedPositions(figure, board).stream()).collect(Collectors.toList());
+    }
+
+    private int getBenchWorthDiff(Color atMovePlayer) {
+        final double benchWorthDiff;
 
         if (!game.getBench().isEmpty()) {
-            final Map<Player, Integer> playerBenchWorth = game.
-                    getBench().
+            final Map<Color, Double> playerBenchWorth =
+                    game.getBench().
                     entrySet().
                     stream().
                     collect(Collectors.toMap(Map.Entry::getKey, this::getSum));
 
-            final Integer atMoveBenchWorthInt = playerBenchWorth.get(atMovePlayer);
-            final Integer notAtMoveBenchWorthInt = playerBenchWorth.get(game.getEnemy(game.getAtMove()));
+            final Double atMoveBenchWorthInt = playerBenchWorth.get(atMovePlayer);
+            final Double notAtMoveBenchWorthInt = playerBenchWorth.get(Color.getEnemy(game.getAtMove().getColor()));
 
-            final int atMoveBenchWorth = atMoveBenchWorthInt == null ? 0 : atMoveBenchWorthInt;
-            final int notAtMoveBenchWorth = notAtMoveBenchWorthInt == null ? 0 : notAtMoveBenchWorthInt;
+            final double atMoveBenchWorth = atMoveBenchWorthInt == null ? 0 : atMoveBenchWorthInt;
+            final double notAtMoveBenchWorth = notAtMoveBenchWorthInt == null ? 0 : notAtMoveBenchWorthInt;
 
             benchWorthDiff = atMoveBenchWorth - notAtMoveBenchWorth;
         } else {
             benchWorthDiff = 0;
         }
-        double benchWorthDiffInPawns = benchWorthDiff / 100d;
-        return (int) Math.round(benchWorthDiffInPawns);
+        return (int) Math.round(benchWorthDiff);
     }
 
-    private Integer getSum(Map.Entry<Player, List<Figure>> entry) {
-        return entry.getValue().stream().mapToInt(figure -> figure.getType().getWorth()).sum();
+    private Double getSum(Map.Entry<Color, Map<FigureType, List<Figure>>> entry) {
+        return entry.getValue().values().stream().mapToDouble(list -> list.stream().mapToDouble(figure -> figure.getType().getWorth()).sum()).sum();
     }
 
-    private int getFigureWorthDiff(List<Figure> blackFigures, List<Figure> whiteFigures, Player player) {
-        int figureWorthDiff;
-        final Integer blackFiguresWorth = blackFigures.stream().mapToInt(figure -> figure.getType().getWorth()).sum();
-        final Integer whiteFiguresWorth = whiteFigures.stream().mapToInt(figure -> figure.getType().getWorth()).sum();
+    private int getFigureWorthDiff(List<Figure> atMoveFigures, List<Figure> notAtMoveFigures) {
+        double figureWorthDiff;
+        final Double atMoveFiguresWorth = atMoveFigures.stream().mapToDouble(figure -> figure.getType().getWorth()).sum();
+        final Double notAtMoveFiguresWorth = notAtMoveFigures.stream().mapToDouble(figure -> figure.getType().getWorth()).sum();
 
-        if (player.isWhite()) {
-            figureWorthDiff = whiteFiguresWorth - blackFiguresWorth;
-        } else {
-            figureWorthDiff = blackFiguresWorth - whiteFiguresWorth;
-        }
-        double figureWorthDiffInPawns = figureWorthDiff / 100d;
-        return (int) Math.round(figureWorthDiffInPawns);
-    }
-
-    /**
-     * The Threefold Repetition Rule says that a Set of Positions (A Board)
-     * can only occur up to 3 times?
-     *
-     *
-     * @param history move history of the game, not null
-     * @param board
-     * @return
-     * @see <a href="https://en.wikipedia.org/wiki/Threefold_repetition">Threefold Repetition</a>
-     */
-    private int checkThreeRepRule(MoveHistory history, Board board) {
-        //Threefold repetition rule: if a set of positions occur tree times a draw can be made
-        if (history.checkOccurrences(board) >= 3) {
-            return -500;
-        }
-        return 0;
-    }
-
-    /**
-     * Checks for the Fifty-Move-Rule.
-     *  A'"move" consists of a player completing their turn followed by the opponent completing their turn".
-     *
-     * @param history history of the Game
-     * @return a value evaluating this Rule, -500 if this rule is not followed, else zero.
-     * @see <a href="https://en.wikipedia.org/wiki/Fifty-move_rule">Fifty-Move-Rule</a>
-     */
-    private int checkFiftyMovesRule(MoveHistory history) {
-        if (history.size() < 100) {
-            return 0;
-        }
-        return history.lastHundred().stream().anyMatch(fiftyMovesPredicate()) ? 0 : -500;
-    }
-
-    /**
-     * Check if move is a Strike or a Pawn-Move.
-     *
-     * @return true if this rule is followed.
-     */
-    private Predicate<PlayerMove> fiftyMovesPredicate() {
-        return move -> move.isStrike() || move.getMainMove().getFigure().getType() == FigureType.PAWN;
+        figureWorthDiff = atMoveFiguresWorth - notAtMoveFiguresWorth;
+        return (int) Math.round(figureWorthDiff);
     }
 }

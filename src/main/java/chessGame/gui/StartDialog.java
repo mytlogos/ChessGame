@@ -1,8 +1,10 @@
 package chessGame.gui;
 
 import chessGame.engine.Difficulty;
-import chessGame.mechanics.ChessGame;
-import chessGame.mechanics.Game;
+import chessGame.mechanics.game.ChessGame;
+import chessGame.mechanics.game.ChessGameImpl;
+import chessGame.mechanics.Color;
+import chessGame.mechanics.game.Game;
 import chessGame.mechanics.Player;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
@@ -10,14 +12,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
-import java.util.List;
-
 /**
  *
  */
-class StartDialog extends Dialog<Game> {
+class StartDialog extends Dialog<ChessGame> {
 
-    private final ComboBox<Player.PlayerType> playerTypeBox = new ComboBox<>();
+    private final ComboBox<Color> playerTypeBox = new ComboBox<>();
     private final ComboBox<Difficulty> difficultyBox = new ComboBox<>();
 
     private final Text playerText = new Text("Spieler: ");
@@ -36,8 +36,8 @@ class StartDialog extends Dialog<Game> {
         setResultConverter(param -> {
             if (param.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
                 final PlayMode item = playModeComboBox.getSelectionModel().getSelectedItem();
-                final List<Player> players = item.getPlayer(this);
-                return new ChessGame(players);
+                PlayerSet set = item.getPlayer(this);
+                return new ChessGameImpl(set.getBlack(), set.getWhite());
             }
             return null;
         });
@@ -70,8 +70,8 @@ class StartDialog extends Dialog<Game> {
         playModeComboBox.getItems().addAll(PlayMode.values());
         playModeComboBox.getSelectionModel().select(PlayMode.HUMAN_VS_AI);
 
-        playerTypeBox.getItems().addAll(Player.PlayerType.values());
-        playerTypeBox.getSelectionModel().select(Player.PlayerType.WHITE);
+        playerTypeBox.getItems().addAll(Color.values());
+        playerTypeBox.getSelectionModel().select(Color.WHITE);
 
         difficultyBox.getItems().addAll(Difficulty.values());
         difficultyBox.getSelectionModel().select(Difficulty.EASY);
@@ -81,46 +81,75 @@ class StartDialog extends Dialog<Game> {
     private enum PlayMode {
         HUMAN_VS_HUMAN {
             @Override
-            List<Player> getPlayer(StartDialog dialog) {
-                return List.of(new Player(Player.PlayerType.BLACK), new Player(Player.PlayerType.WHITE));
+            PlayerSet getPlayer(StartDialog dialog) {
+                return new PlayerSet(Player.getBlack(), Player.getWhite());
             }
 
         },
         HUMAN_VS_AI {
             @Override
-            List<Player> getPlayer(StartDialog dialog) {
+            PlayerSet getPlayer(StartDialog dialog) {
                 final Difficulty item = dialog.difficultyBox.getSelectionModel().getSelectedItem();
 
-                final Player.PlayerType playerType = dialog.playerTypeBox.getSelectionModel().getSelectedItem();
-                Player human = new Player(playerType);
+                final Color color = dialog.playerTypeBox.getSelectionModel().getSelectedItem();
+
+                Player human;
                 Player ai;
 
-                if (playerType == Player.PlayerType.WHITE) {
-                    ai = new Player(Player.PlayerType.BLACK);
+                if (color == Color.WHITE) {
+                    human = Player.getWhite();
+                    ai = Player.getBlack();
                     ai.setDifficulty(item);
                 } else {
-                    ai = new Player(Player.PlayerType.WHITE);
+                    human = Player.getBlack();
+                    ai = Player.getWhite();
                     ai.setDifficulty(item);
                 }
                 ai.setAI();
-                return List.of(human, ai);
+                return new PlayerSet(human, ai);
             }
 
         },
         AI_VS_AI {
             @Override
-            List<Player> getPlayer(StartDialog dialog) {
-                Player player1 = new Player(Player.PlayerType.WHITE);
+            PlayerSet getPlayer(StartDialog dialog) {
+                Player player1 = Player.getWhite();
                 player1.setAI();
+                player1.setDifficulty(Difficulty.EASY);
 
-                Player player2 = new Player(Player.PlayerType.BLACK);
+                Player player2 = Player.getBlack();
                 player2.setAI();
-                return List.of(player1, player2);
+                player2.setDifficulty(Difficulty.EASY);
+                return new PlayerSet(player1, player2);
             }
 
         };
 
-        abstract List<Player> getPlayer(StartDialog dialog);
+        abstract PlayerSet getPlayer(StartDialog dialog);
     }
+
+    private static class PlayerSet {
+        private Player white;
+        private Player black;
+
+        PlayerSet(Player player1, Player player2) {
+            if (player1.isWhite()) {
+                this.white = player1;
+                this.black = player2;
+            } else {
+                this.white = player2;
+                this.black = player1;
+            }
+        }
+
+        Player getWhite() {
+            return white;
+        }
+
+        Player getBlack() {
+            return black;
+        }
+    }
+
 
 }

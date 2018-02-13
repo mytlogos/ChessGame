@@ -14,8 +14,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
-                    <source>1.9</source>
-                    <target>1.9</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
                 <version>3.7.0</version>
             </plugin>
@@ -26,7 +26,19 @@
         <dependency>
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
-            <version>9.0.0</version>
+            <version>8.40.14</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-generator-annprocess -->
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.20</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.codecentric.centerdevice</groupId>
+            <artifactId>javafxsvg</artifactId>
+            <version>1.2.1</version>
         </dependency>
     </dependencies>
 

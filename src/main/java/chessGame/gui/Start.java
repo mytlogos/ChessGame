@@ -1,5 +1,6 @@
 package chessGame.gui;
 
+import de.codecentric.centerdevice.javafxsvg.SvgImageLoaderFactory;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -12,6 +13,8 @@ import javafx.stage.Stage;
 public class Start extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
+        SvgImageLoaderFactory.install();
+
         final Pane pane = FXMLLoader.load(getClass().getResource("/fxml/chess.fxml"));
         pane.setPrefSize(1000, 1000);
         pane.getStylesheets().add("/css/chess.css");

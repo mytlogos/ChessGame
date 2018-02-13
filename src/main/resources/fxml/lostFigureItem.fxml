@@ -5,18 +5,16 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<fx:root alignment="CENTER" spacing="5.0" type="HBox" xmlns="http://javafx.com/javafx/9.0.1" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <Text fx:id="lostFigureCounter" strokeType="OUTSIDE" strokeWidth="0.0">
-         <font>
-            <Font size="24.0" />
-         </font>
-      </Text>
-      <Text layoutX="10.0" layoutY="23.0" strokeType="OUTSIDE" strokeWidth="0.0" text="x">
-         <font>
-            <Font size="24.0" />
-         </font>
-      </Text>
-      <ImageView fx:id="lostFigureView" fitHeight="50.0" fitWidth="50.0" pickOnBounds="true" preserveRatio="true" />
-   </children>
+<fx:root alignment="CENTER" spacing="5.0" type="HBox" xmlns="http://javafx.com/javafx/" xmlns:fx="http://javafx.com/fxml">
+    <Text fx:id="lostFigureCounter" strokeType="OUTSIDE" strokeWidth="0.0">
+        <font>
+          <Font size="24.0"/>
+        </font>
+    </Text>
+    <Text layoutX="10.0" layoutY="23.0" strokeType="OUTSIDE" strokeWidth="0.0" text="x">
+        <font>
+          <Font size="24.0"/>
+        </font>
+    </Text>
+    <ImageView fx:id="lostFigureView" fitHeight="50.0" fitWidth="50.0" pickOnBounds="true" preserveRatio="true"/>
 </fx:root>

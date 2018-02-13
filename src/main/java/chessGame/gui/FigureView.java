@@ -2,12 +2,13 @@ package chessGame.gui;
 
 
 import chessGame.mechanics.Position;
-import chessGame.mechanics.figures.Figure;
+import chessGame.mechanics.Figure;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.EventHandler;
 import javafx.scene.Cursor;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
@@ -22,15 +23,16 @@ class FigureView extends ImageView {
     private final Cursor draggingCursor = Cursor.CLOSED_HAND;
     private final Cursor hoverCursor = Cursor.OPEN_HAND;
     private final EventHandler<MouseEvent> onDragDetected;
-    private BooleanProperty active = new SimpleBooleanProperty();
+    private final BooleanProperty active = new SimpleBooleanProperty();
     private Cursor savedCursor;
-    private BooleanProperty dragging = new SimpleBooleanProperty();
+    private final BooleanProperty dragging = new SimpleBooleanProperty();
 
     FigureView(Figure figure, BoardGridManager boardGrid) {
         this.figure = figure;
         this.boardGrid = boardGrid;
 
         setImage(figure.getImage());
+        setPreserveRatio(true);
 
         onDragDetected = event -> {
             setDragging(true);
@@ -47,7 +49,7 @@ class FigureView extends ImageView {
     }
 
     Position getPosition() {
-        return figure.getPosition();
+        return boardGrid.getGame().getBoard().positionOf(figure);
     }
 
     private void initListener() {
