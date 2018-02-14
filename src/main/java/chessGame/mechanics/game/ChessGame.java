@@ -4,18 +4,14 @@ import chessGame.mechanics.Player;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 
-import java.util.Deque;
 import java.util.Queue;
 
 /**
  * Interface for usage of a Game which connects to the Gui.
  */
 public interface ChessGame extends Game {
-    boolean isMadeMove();
-
     BooleanProperty madeMoveProperty();
 
     IntegerProperty roundProperty();

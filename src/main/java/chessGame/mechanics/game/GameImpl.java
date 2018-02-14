@@ -36,8 +36,17 @@ public class GameImpl implements Game {
         Objects.requireNonNull(black);
         Objects.requireNonNull(white);
 
-        this.black = black;
-        this.white = white;
+
+        if (black.isWhite() && !white.isWhite()) {
+            this.white = black;
+            this.black = white;
+        } else if (!black.isWhite() && white.isWhite()) {
+            this.black = black;
+            this.white = white;
+        } else {
+            throw new IllegalArgumentException("Color of Player are not legal: White: " + white + " Black: " + black);
+        }
+
 
         board = new ArrayBoard();
         timer = new chessGame.mechanics.Timer(duration);

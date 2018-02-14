@@ -7,10 +7,16 @@ import chessGame.mechanics.Player;
 import chessGame.mechanics.RuleEvaluator;
 import chessGame.mechanics.board.Board;
 import chessGame.mechanics.move.PlayerMove;
-import javafx.beans.property.*;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.util.Duration;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.BitSet;
+import java.util.Map;
+import java.util.Queue;
 
 /**
  *
@@ -41,18 +47,6 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
 
         engineMap = EngineWorker.getEngineWorker().getEngines(this);
         initListener();
-    }
-
-
-
-    @Override
-    public boolean isMadeMove() {
-        return madeMove.get();
-    }
-
-    @Override
-    public BooleanProperty madeMoveProperty() {
-        return madeMove;
     }
 
     private void initListener() {
@@ -120,11 +114,6 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
         engineMap = game.engineMap;
     }
 
-    @Override
-    public IntegerProperty roundProperty() {
-        return round;
-    }
-
     private Player getLoser() {
         return loser;
     }
@@ -135,15 +124,15 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
         Engine whiteEngine = engineMap.get(white);
 
         if (whiteEngine instanceof AlphaBetaExtendedEngine) {
-            System.out.println("Average Duration White "+((AlphaBetaExtendedEngine) whiteEngine).duration.stream().mapToDouble(Double::doubleValue).average().orElse(0));
-            System.out.println("Average CutOffRate White "+((AlphaBetaExtendedEngine) whiteEngine).cutOffRates.stream().mapToDouble(Double::doubleValue).average().orElse(0));
+            System.out.println("Average Duration White " + ((AlphaBetaExtendedEngine) whiteEngine).duration.stream().mapToDouble(Double::doubleValue).average().orElse(0));
+            System.out.println("Average CutOffRate White " + ((AlphaBetaExtendedEngine) whiteEngine).cutOffRates.stream().mapToDouble(Double::doubleValue).average().orElse(0));
         }
 
         Engine blackEngine = engineMap.get(black);
 
         if (blackEngine instanceof AlphaBetaExtendedEngine) {
-            System.out.println("Average Duration Black "+((AlphaBetaExtendedEngine) blackEngine).duration.stream().mapToDouble(Double::doubleValue).average().orElse(0));
-            System.out.println("Average CutOffRate Black "+((AlphaBetaExtendedEngine) blackEngine).cutOffRates.stream().mapToDouble(Double::doubleValue).average().orElse(0));
+            System.out.println("Average Duration Black " + ((AlphaBetaExtendedEngine) blackEngine).duration.stream().mapToDouble(Double::doubleValue).average().orElse(0));
+            System.out.println("Average CutOffRate Black " + ((AlphaBetaExtendedEngine) blackEngine).cutOffRates.stream().mapToDouble(Double::doubleValue).average().orElse(0));
         }
     }
 
@@ -211,6 +200,8 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
                 //if last move player is human and at move player is human
                 //redo two moves
                 //todo request redo from enemy
+                //as long as it is not implemented redo needs to be on false
+                setRedo(false);
             } else if (!player.isHuman() && enemy.isHuman()) {
                 //if last move player is not human and at move player is human
                 //redo two moves
@@ -226,6 +217,7 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
                     singlePlyRedo();
                     redoQueue.add(lastMove);
                 }
+                madeMove.set(true);
             } else if (!player.isHuman() && !enemy.isHuman()) {
                 //if last move player is not human and at move player is not human
                 // redo only one move
@@ -234,6 +226,7 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
 
                 singlePlyRedo();
                 redoQueue.add(playerMove);
+                madeMove.set(true);
             } else {
                 //if last move player is human but at move player is not
                 // redo only one move
@@ -242,10 +235,9 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
 
                 singlePlyRedo();
                 redoQueue.add(playerMove);
+                madeMove.set(true);
             }
         }
-        setRedo(true);
-        madeMove.set(true);
     }
 
     @Override
@@ -294,6 +286,16 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
     @Override
     public SimulationGame getSimulation() {
         return new SimulationGameImpl(this);
+    }
+
+    @Override
+    public BooleanProperty madeMoveProperty() {
+        return madeMove;
+    }
+
+    @Override
+    public IntegerProperty roundProperty() {
+        return round;
     }
 
     public BooleanProperty finishedProperty() {

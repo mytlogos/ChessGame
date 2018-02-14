@@ -27,12 +27,15 @@ class StartDialog extends Dialog<ChessGame> {
     StartDialog() {
         final DialogPane pane = getDialogPane();
         pane.setPrefSize(200, 200);
+
         final ButtonType start = new ButtonType("Start", ButtonBar.ButtonData.OK_DONE);
+
         pane.getButtonTypes().add(start);
         pane.getButtonTypes().add(new ButtonType("Schließen", ButtonBar.ButtonData.CANCEL_CLOSE));
         pane.lookupButton(start).disableProperty().bind(playModeComboBox.getSelectionModel().selectedItemProperty().isNull());
 
         pane.setContent(getContent());
+
         setResultConverter(param -> {
             if (param.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
                 final PlayMode item = playModeComboBox.getSelectionModel().getSelectedItem();

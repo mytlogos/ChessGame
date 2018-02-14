@@ -97,8 +97,8 @@ public abstract class BoardEncoder {
     private static void setGameParameter(BitSet set, Game game) {
         setCastle(set, game, game.getWhite(), whiteCastleIndex);
         setCastle(set, game, game.getBlack(), blackCastleIndex);
-        setEnpassant(set, game, game.getWhite(), whiteEPIndex);
-        setEnpassant(set, game, game.getBlack(), blackEPIndex);
+        setEnpassant(set, game, whiteEPIndex, game.getWhite().isWhite());
+        setEnpassant(set, game, blackEPIndex, game.getBlack().isWhite());
 
         Player atMove = game.getAtMove();
 
@@ -147,8 +147,8 @@ public abstract class BoardEncoder {
         setToBitSet(set, castleIndex, pattern);
     }
 
-    private static void setEnpassant(BitSet set, Game game, Player player, int epIndex) {
-        int enPassantColumn = game.getHistory().getEnPassantColumn(player.isWhite());
+    private static void setEnpassant(BitSet set, Game game, int epIndex, boolean white) {
+        int enPassantColumn = game.getHistory().getEnPassantColumn(white);
         setToBitSet(set, epIndex, 4, enPassantColumn);
     }
 

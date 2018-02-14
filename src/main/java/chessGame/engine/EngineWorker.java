@@ -25,10 +25,6 @@ public class EngineWorker {
     }
 
     public Map<Player, Engine> getEngines(ChessGame game) {
-        if (!Platform.isFxApplicationThread()) {
-            throw new IllegalThreadStateException("Not Called from FX-Thread");
-        }
-
         Map<Player, Engine> engineMap = new HashMap<>();
         game.finishedProperty().addListener((observable, oldValue, newValue) -> processFinish(game, newValue));
         final Player black = game.getBlack();

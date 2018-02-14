@@ -6,11 +6,13 @@ import chessGame.mechanics.Player;
 import chessGame.mechanics.Position;
 import chessGame.mechanics.board.Board;
 import chessGame.mechanics.game.ChessGame;
+import chessGame.multiplayer.MultiPlayerGame;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.NumberBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
@@ -20,11 +22,13 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Manages the Board at Gui Level.
@@ -46,13 +50,7 @@ class BoardGridManager implements Serializable {
 
     private ChangeListener<Number> roundListener = (observable1, playerNotAtMove, playerAtMove) -> processRoundChange();
     private ChangeListener<Boolean> madeMoveListener = (observable1, oldMadeMove, newMadeMove) -> processBoardChange(newMadeMove);
-
-    private void processBoardChange(boolean madeMove) {
-        if (madeMove) {
-            moveShower.prepareMoves();
-            moveAnimator.animateChange();
-        }
-    }
+    private Map<String, Text> descriptionMap = new HashMap<>();
 
     BoardGridManager(ChessGameGui chess) {
         this.chess = chess;
@@ -86,14 +84,6 @@ class BoardGridManager implements Serializable {
         orientationProperty.set(SideOrientation.UP);
     }
 
-    SideOrientation getOrientation() {
-        return orientationProperty.get();
-    }
-
-    ObjectProperty<SideOrientation> orientationProperty() {
-        return orientationProperty;
-    }
-
     private void initListener() {
         gridPane.setOnMouseDragOver(this::dragFigureView);
         gridPane.setOnMouseDragExited(this::resetFigureViewDrag);
@@ -115,22 +105,6 @@ class BoardGridManager implements Serializable {
 
         if (oldValue != null) {
             oldValue.setSelected(false);
-        }
-    }
-
-    private void processRoundChange() {
-        Player atMove = getGame().getAtMove();
-        Color notAtMove = Color.getEnemy(atMove.getColor());
-
-        if (chess != null) {
-            chess.showPlayerAtMove(atMove);
-        }
-
-        if (notAtMove != null) {
-            gameProperty().get().getBoard().getFigures(notAtMove).forEach(figure -> getFigureView(figure).setActive(false));
-        }
-        if (atMove.isHuman()) {
-            gameProperty().get().getBoard().getFigures(atMove.getColor()).forEach(figure -> getFigureView(figure).setActive(true));
         }
     }
 
@@ -185,24 +159,6 @@ class BoardGridManager implements Serializable {
         }
     }
 
-    ChessGame getGame() {
-        return game.get();
-    }
-
-    FigureView getFigureView(Figure figure) {
-        return figureViewMap.computeIfAbsent(figure, (k) -> {
-            final FigureView figureView = new FigureView(k, this);
-            Position position = getGame().getBoard().positionOf(k);
-
-            if (position.isInBoard()) {
-                getPositionPane(position).setFigure(figureView);
-                return figureView;
-            } else {
-                return null;
-            }
-        });
-    }
-
     private void buildBoard(Board board) {
         positionMap.values().forEach(BoardPanel::clear);
         figureViewMap.clear();
@@ -218,12 +174,11 @@ class BoardGridManager implements Serializable {
         }));
     }
 
-    BoardPanel getPositionPane(Position position) {
-        return positionMap.computeIfAbsent(position, this::createPanel);
-    }
-
-    void setGame(ChessGame game) {
-        this.game.set(game);
+    private void processBoardChange(boolean madeMove) {
+        if (madeMove) {
+            moveShower.prepareMoves();
+            moveAnimator.animateChange();
+        }
     }
 
     @Override
@@ -250,6 +205,10 @@ class BoardGridManager implements Serializable {
                 '}';
     }
 
+    ObjectProperty<SideOrientation> orientationProperty() {
+        return orientationProperty;
+    }
+
     void addFigureView(FigureView view) {
         figureViewMap.put(view.getFigure(), view);
     }
@@ -260,10 +219,6 @@ class BoardGridManager implements Serializable {
 
     Collection<BoardPanel> getFigurePositions() {
         return positionMap.values();
-    }
-
-    BoardPanel getChosenPosition() {
-        return chosenPosition.get();
     }
 
     void setChosenPosition(BoardPanel chosenPosition) {
@@ -346,6 +301,56 @@ class BoardGridManager implements Serializable {
         }
     }
 
+    Text getBoardDescription(String s) {
+        return descriptionMap.get(s);
+    }
+
+    private void processRoundChange() {
+        Player atMove = getGame().getAtMove();
+        Color notAtMove = Color.getEnemy(atMove.getColor());
+
+        if (chess != null) {
+            chess.showPlayerAtMove(atMove);
+        }
+        if (notAtMove != null) {
+            gameProperty().get().getBoard().getFigures(notAtMove).forEach(figure -> getFigureView(figure).setActive(false));
+        }
+
+        if (getGame() instanceof MultiPlayerGame) {
+            if (getChess().getClient().getPlayer().equals(atMove)) {
+                gameProperty().get().getBoard().getFigures(atMove.getColor()).forEach(figure -> getFigureView(figure).setActive(true));
+            }
+        } else if (atMove.isHuman()) {
+            gameProperty().get().getBoard().getFigures(atMove.getColor()).forEach(figure -> getFigureView(figure).setActive(true));
+        }
+    }
+
+    ChessGame getGame() {
+        return game.get();
+    }
+
+    FigureView getFigureView(Figure figure) {
+        return figureViewMap.computeIfAbsent(figure, (k) -> {
+            final FigureView figureView = new FigureView(k, this);
+            Position position = getGame().getBoard().positionOf(k);
+
+            if (position.isInBoard()) {
+                getPositionPane(position).setFigure(figureView);
+                return figureView;
+            } else {
+                return null;
+            }
+        });
+    }
+
+    BoardPanel getPositionPane(Position position) {
+        return positionMap.computeIfAbsent(position, this::createPanel);
+    }
+
+    void setGame(ChessGame game) {
+        this.game.set(game);
+    }
+
     private void snapToOld(MouseDragEvent event) {
         final Object source = event.getGestureSource();
         if (source instanceof FigureView) {
@@ -389,21 +394,19 @@ class BoardGridManager implements Serializable {
         view.setCursor(Cursor.CLOSED_HAND);
 
         final Parent parent = view.getParent();
-        final double layoutX = parent.getLayoutX();
-        final double layoutY = parent.getLayoutY();
+
+        Bounds bounds = parent.localToScene(parent.getLayoutBounds());
+
+        final double layoutX = bounds.getMinX();
+        final double layoutY = bounds.getMinY();
 
         final double x = event.getSceneX();
         final double y = event.getSceneY();
 
         final double newX = x - layoutX - 20;
         final double newY = y - layoutY - 20;
+
         view.relocate(newX, newY);
-    }
-
-    private Map<String, Text> descriptionMap = new HashMap<>();
-
-    Text getBoardDescription(String s) {
-        return descriptionMap.get(s);
     }
 
     private BoardPanel createPanel(Position k) {

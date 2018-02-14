@@ -7,13 +7,17 @@ import java.util.Objects;
 /**
  *
  */
-public final class Player implements Cloneable {
-    private final Color type;
+public class Player implements Cloneable {
+    private Color type;
     private boolean human = true;
     private Difficulty difficulty;
 
-    private Player(Color type) {
+    protected Player(Color type) {
         Objects.requireNonNull(type);
+        setType(type);
+    }
+
+    protected void setType(Color type) {
         this.type = type;
     }
 
@@ -54,14 +58,14 @@ public final class Player implements Cloneable {
         return type.hashCode();
     }
 
-    @Override
+    /*@Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
         Player player = (Player) o;
         return type == player.type;
-    }
+    }*/
 
     @Override
     public String toString() {

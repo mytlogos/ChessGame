@@ -3,11 +3,13 @@ package chessGame.gui;
 import chessGame.mechanics.Color;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.game.ChessGame;
+import chessGame.multiplayer.MultiPlayerGame;
+import chessGame.multiplayer.PlayerClient;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -22,8 +24,10 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -61,6 +65,7 @@ public class ChessGameGui {
 
     private BoardGridManager manager;
     private HistoryDisplay historyDisplay;
+    private PlayerClient client = null;
 
     public void initialize() {
         whitePlayerController.setPlayer(Color.WHITE);
@@ -122,6 +127,103 @@ public class ChessGameGui {
         } else {
             return blackPlayerController;
         }
+    }
+
+    @FXML
+    private void startMultiPlay() throws IOException {
+        if (client == null) {
+            client = new PlayerClient();
+            root.getScene().getWindow().setOnCloseRequest(event -> client.closeClient());
+        }
+
+        Dialog<MultiPlayerGame> dialog = getMultiGameDialog();
+        Optional<MultiPlayerGame> multiPlayerGame = dialog.showAndWait();
+
+        if (multiPlayerGame.isPresent()) {
+            MultiPlayerGame game = multiPlayerGame.get();
+            currentGame.set(game);
+            configPreGameSetting(game);
+
+            ChatWindow window = new ChatWindow(client);
+            window.show();
+        } else {
+            showNoNewGameAlert();
+        }
+    }
+
+    PlayerClient getClient() {
+        return client;
+    }
+
+    private Dialog<MultiPlayerGame> getMultiGameDialog() throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/onlineWindow.fxml"));
+        Pane root = loader.load();
+        OnlineWindow controller = loader.getController();
+        controller.setClient(client);
+
+        Dialog<MultiPlayerGame> dialog = new Dialog<>();
+        dialog.initModality(Modality.NONE);
+        dialog.getDialogPane().setContent(root);
+
+        client.gameProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                MultiPlayerGame game = client.getGame();
+
+                if (game != null && (!game.isRunning() && !game.isFinished())) {
+                    dialog.setResult(game);
+                }
+
+                dialog.close();
+            }
+        });
+
+        dialog.setResultConverter(param -> {
+            MultiPlayerGame game = client.getGame();
+
+            if (game != null && (game.isRunning() || game.isFinished())) {
+                return null;
+            }
+            return game;
+        });
+        return dialog;
+    }
+
+    private void configPreGameSetting(ChessGame current) {
+        pauseBtn.disableProperty().bind(current.runningProperty().not());
+
+        current.runningProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                gameChangerBtn.setText("Aufgeben");
+            } else {
+                gameChangerBtn.setText("Neues Spiel");
+            }
+        });
+
+        current.setRunning(true);
+        timer.textProperty().bind(current.timeProperty());
+
+        whitePlayerController.reset();
+        blackPlayerController.reset();
+
+        current.finishedProperty().addListener((observable, oldValue, newValue) -> {
+            System.out.println("finished " + newValue);
+            if (newValue) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                if (current.isWon()) {
+                    String player = current.getWinner().isWhite() ? "Weiß" : "Schwarz";
+                    alert.setContentText("Spieler " + player + " hat gewonnen.");
+                } else if (current.isDraw()) {
+                    alert.setContentText("Es ist ein unentschieden.");
+                }
+                alert.show();
+            }
+        });
+    }
+
+    private void showNoNewGameAlert() {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setContentText("Es konnte kein neues Spiel erstellt werden");
+        alert.show();
     }
 
     @FXML
@@ -196,40 +298,9 @@ public class ChessGameGui {
 
         final ChessGame current = currentGame.get();
         if (current == null) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setContentText("Es konnte kein neues Spiel erstellt werden");
-            alert.show();
+            showNoNewGameAlert();
         } else {
-            pauseBtn.disableProperty().bind(current.runningProperty().not());
-
-            current.runningProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue) {
-                    gameChangerBtn.setText("Aufgeben");
-                } else {
-                    gameChangerBtn.setText("Neues Spiel");
-                }
-            });
-
-            current.setRunning(true);
-            timer.textProperty().bind(current.timeProperty());
-
-            whitePlayerController.reset();
-            blackPlayerController.reset();
-
-            current.finishedProperty().addListener((observable, oldValue, newValue) -> {
-                System.out.println("finished " + newValue);
-                if (newValue) {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    if (current.isWon()) {
-                        String player = current.getWinner().isWhite() ? "Weiß" : "Schwarz";
-                        alert.setContentText("Spieler " + player + " hat gewonnen.");
-                    } else if (current.isDraw()) {
-                        alert.setContentText("Es ist ein unentschieden.");
-                    }
-                    alert.show();
-                }
-            });
-
+            configPreGameSetting(current);
         }
     }
 

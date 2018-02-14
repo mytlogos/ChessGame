@@ -19,8 +19,8 @@ import javafx.scene.layout.VBox;
  */
 public class HistoryDisplay extends VBox {
     private ObjectProperty<ChessGame> game = new SimpleObjectProperty<>();
-    private ChangeListener<Number> roundListener = (observable, oldValue, newValue) -> processRoundChange(newValue);
     private TableView<String> historyRoundsView = new TableView<>();
+    private ChangeListener<Number> roundListener = (observable, oldValue, newValue) -> processRoundChange();
 
     HistoryDisplay() {
         game.addListener((observable, oldValue, newValue) -> bindGame(newValue, oldValue));
@@ -28,6 +28,16 @@ public class HistoryDisplay extends VBox {
         setMaxHeight(200);
 
         initTable();
+    }
+
+    private void bindGame(ChessGame newValue, ChessGame oldValue) {
+        newValue.roundProperty().addListener(roundListener);
+
+        if (oldValue != null) {
+            oldValue.roundProperty().removeListener(roundListener);
+        }
+
+        resetHistory();
     }
 
     private void initTable() {
@@ -55,14 +65,16 @@ public class HistoryDisplay extends VBox {
         historyRoundsView.getColumns().add(blackColumn);
     }
 
-    private void bindGame(ChessGame newValue, ChessGame oldValue) {
-        newValue.roundProperty().addListener(roundListener);
+    private void resetHistory() {
+        historyRoundsView.getItems().clear();
+        MoveHistory history = getGame().getHistory();
 
-        if (oldValue != null) {
-            oldValue.roundProperty().removeListener(roundListener);
+        for (int i = 0; i < history.size(); i++) {
+            PlayerMove move = history.moveAtPly(i);
+
+            String moveAsString = getMoveAsString(move);
+            addItem(moveAsString, move.isWhite());
         }
-
-        resetHistory();
     }
 
     /**
@@ -78,25 +90,8 @@ public class HistoryDisplay extends VBox {
         return indexColumn;
     }
 
-    private void resetHistory() {
-        historyRoundsView.getItems().clear();
-        MoveHistory history = getGame().getHistory();
-
-        for (int i = 0; i < history.size(); i++) {
-            int round = getRound(i + 1);
-            PlayerMove move = history.moveAtPly(i);
-
-            String moveAsString = getMoveAsString(move);
-            addItem(moveAsString, move.isWhite());
-        }
-    }
-
     ChessGame getGame() {
         return game.get();
-    }
-
-    private int getRound(Number newRound) {
-        return (newRound.intValue() + 1) >> 1;
     }
 
     private String getMoveAsString(PlayerMove move) {
@@ -108,14 +103,19 @@ public class HistoryDisplay extends VBox {
             result = "Castle to " + mainMove.getTo().notation();
         } else {
             if (move.isPromotion()) {
-                Move promotion = move.getPromotionMove().get();
-                result = mainMove.getFigure() + " " + mainMove.getFrom().notation() + " -> " + promotion.getTo().notation() + " promoted to " + promotion.getFigure();
+                Move promotion = move.getPromotionMove().orElseThrow(NullPointerException::new);
+                result = mainMove.getFigure() + " " + mainMove.getFrom().notation() + " -> " + promotion.getTo().notation();
             } else {
                 result = mainMove.getFigure() + " " + mainMove.getFrom().notation() + " -> " + mainMove.getTo().notation();
             }
 
             if (move.isStrike()) {
-                result += " x " + move.getSecondaryMove().get().getFigure();
+                result += " x " + move.getSecondaryMove().orElseThrow(NullPointerException::new).getFigure();
+            }
+
+            if (move.isPromotion()) {
+                Move promotion = move.getPromotionMove().orElseThrow(NullPointerException::new);
+                result += " promoted to " + promotion.getFigure();
             }
         }
         return result;
@@ -140,8 +140,7 @@ public class HistoryDisplay extends VBox {
         return game;
     }
 
-    private void processRoundChange(Number newRound) {
-        int round = getRound(newRound);
+    private void processRoundChange() {
         PlayerMove lastMove = getGame().getLastMove();
 
         if (historyRoundsView.getItems().size() < getGame().getHistory().size()) {

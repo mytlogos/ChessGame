@@ -18,14 +18,28 @@ public class CheckValidator {
     private final Figure figure;
     private final Position figurePosition;
     private final Board board;
-    private List<Position> possibleFigurePositions;
     private final Map<FigureType, List<CheckItem>> map = new HashMap<>();
+    private List<Position> possibleFigurePositions;
 
     public CheckValidator(Figure figure, Board board) {
         this.figure = figure;
         this.board = board;
         figurePosition = this.board.positionOf(figure);
         init();
+    }
+
+    boolean isInvalidMove(PlayerMove move) {
+        if (move == null) {
+            return true;
+        }
+
+        if (move.getMainMove().isMoving(KING)) {
+            Position to = move.getMainMove().getTo();
+            return !possibleFigurePositions.contains(to);
+        } else {
+
+        }
+        return false;
     }
 
     private void init() {
@@ -47,85 +61,54 @@ public class CheckValidator {
         return new ArrayList<>();
     }
 
-    boolean isInvalidMove(PlayerMove move) {
-        if (move == null) {
-            return true;
-        }
-
-        if (move.getMainMove().isMoving(KING)) {
-            Position to = move.getMainMove().getTo();
-            return !possibleFigurePositions.contains(to);
-        } else {
-
-        }
-        return false;
-    }
-
-    private static class CheckItem {
-        private FigureType threat;
-        private Position threatPosition;
-        private List<Position> unblocked = new ArrayList<>();
-        private FigureType blocker = null;
-        private Position blockerPosition = null;
-        private List<Position> blocked = new ArrayList<>();
-    }
-
     private CheckItem getCheckItem(Figure figure) {
-        final CheckItem result;
 
         //should never be not on Board
         Position position = board.positionOf(figure);
 
+        CheckItem result = null;
+
         //can only move one field forward, except in start position, where he can move two fields forward, or strike diagonal
         if (figure.is(PAWN)) {
-            result = getPawnPosition(figure, board, position);
+            result = removePawnPosition(figure, position);
 
             //rook can only move vertical or horizontal in two directions
         } else if (figure.is(ROOK)) {
-            CheckItem item = null;
+            CheckItem item = getHorizontal(8, figure, position);
+            CheckItem vertical = getVertical(8, figure, position);
 
-            item = getHorizontal(8, figure, board, position);
-            item = getVertical(8, figure, board, position);
-
-            result = item;
+            result = item == null ? vertical : item;
 
             //knight can jump, always two fields vertical/horizontal and one in the other (if two in vertical, then one in horizontal)
         } else if (figure.is(KNIGHT)) {
-            result = getKnightPositions(figure, board, position);
+            removeKnightPositions(figure, position);
 
             //bishop can only move diagonal in four directions
         } else if (figure.is(BISHOP)) {
-            result = getDiagonal(8, figure, board, position);
-
+            result = getDiagonal(8, figure, position);
 
             //queen moves vertical/horizontal and diagonal in all directions, excluding jumping
         } else if (figure.is(QUEEN)) {
 
-            CheckItem item = null;
+            CheckItem horizontal = getHorizontal(8, figure, position);
+            CheckItem vertical = getVertical(8, figure, position);
+            CheckItem diagonal = getDiagonal(8, figure, position);
 
-            item = getHorizontal(8, figure, board, position);
-            item = getVertical(8, figure, board, position);
-            item = getDiagonal(8, figure, board, position);
-
-            result = item;
+            result = horizontal == null ? vertical == null ? diagonal : vertical : horizontal;
             //can move to all adjacent fields
         } else if (figure.is(KING)) {
 
-            CheckItem item = null;
-
-            item = getHorizontal(1, figure, board, position);
-            item = getVertical(1, figure, board, position);
-            item = getDiagonal(1, figure, board, position);
-
-            result = item;
+            getHorizontal(1, figure, position);
+            getVertical(1, figure, position);
+            getDiagonal(1, figure, position);
         } else {
             //should never reach here
             result = null;
         }
-        return null;
+        return result;
     }
 
-    private CheckItem getDiagonal(int max, Figure figure, Board board, Position position) {
+    private CheckItem getDiagonal(int max, Figure figure, Position position) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -141,36 +124,36 @@ public class CheckValidator {
             int leftUpRightDownAddend = 7 * i;
 
             if (leftBackward) {
-                leftBackward = column != 1 && isValid(figure, board, positions, panel - rightUpLeftDownAddend, 1);
+                leftBackward = column != 1 && isValid(figure, positions, panel - rightUpLeftDownAddend, 1);
             }
             if (rightBackward) {
-                rightBackward = column != 8 && isValid(figure, board, positions, panel - leftUpRightDownAddend, 8);
+                rightBackward = column != 8 && isValid(figure, positions, panel - leftUpRightDownAddend, 8);
             }
             if (rightForward) {
-                rightForward = column != 8 && isValid(figure, board, positions, panel + rightUpLeftDownAddend, 8);
+                rightForward = column != 8 && isValid(figure, positions, panel + rightUpLeftDownAddend, 8);
             }
             if (leftForward) {
-                leftForward = column != 1 && isValid(figure, board, positions, panel + leftUpRightDownAddend, 1);
+                leftForward = column != 1 && isValid(figure, positions, panel + leftUpRightDownAddend, 1);
             }
         }
         return null;
     }
 
-    private boolean isValid(Figure figure, Board board, List<Position> positions, int newPanel, int limit) {
+    private boolean isValid(Figure figure, List<Position> positions, int newPanel, int limit) {
         if (Position.isInBoard(newPanel)) {
             Position newPosition = Position.get(newPanel);
 
             if (newPosition.getColumn() == limit) {
-                addPosition(positions, board, figure, newPosition);
+                addPosition(positions, figure, newPosition);
                 return false;
             } else {
-                return addPosition(positions, board, figure, newPosition);
+                return addPosition(positions, figure, newPosition);
             }
         }
         return true;
     }
 
-    private CheckItem getHorizontal(int max, Figure figure, Board board, Position position) {
+    private CheckItem getHorizontal(int max, Figure figure, Position position) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -181,16 +164,16 @@ public class CheckValidator {
 
         for (int addend = 1; addend < max + 1; addend++) {
             if (left) {
-                left = column != 1 && isValid(figure, board, positions, panel - addend, 1);
+                left = column != 1 && isValid(figure, positions, panel - addend, 1);
             }
             if (right) {
-                right = column != 8 && isValid(figure, board, positions, panel + addend, 8);
+                right = column != 8 && isValid(figure, positions, panel + addend, 8);
             }
         }
         return null;
     }
 
-    private CheckItem getVertical(int max, Figure figure, Board board, Position position) {
+    private CheckItem getVertical(int max, Figure figure, Position position) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -202,72 +185,66 @@ public class CheckValidator {
         for (int i = 1; i < max + 1; i++) {
             int verticalAddend = 8 * i;
             if (backward) {
-                backward = row != 1 && isValid(figure, board, positions, panel - verticalAddend, 0);
+                backward = row != 1 && isValid(figure, positions, panel - verticalAddend, 0);
             }
             if (forward) {
-                forward = row != 8 && isValid(figure, board, positions, panel + verticalAddend, 0);
+                forward = row != 8 && isValid(figure, positions, panel + verticalAddend, 0);
             }
         }
         return null;
     }
 
-    private CheckItem getKnightPositions(Figure figure, Board board, Position position) {
-        List<Position> result;
-        List<Position> positions = new ArrayList<>();
-
+    private void removeKnightPositions(Figure figure, Position position) {
         int panel = position.getPanel();
         int column = position.getColumn();
 
         if (column < 7 && column > 2) {
             //left up down
-            knightJump(figure, board, positions, panel, 6, 10);
+            knightJump(figure, panel, 6, 10);
             //right up down
-            knightJump(figure, board, positions, panel, 10, 6);
+            knightJump(figure, panel, 10, 6);
 
             //up down left
-            knightJump(figure, board, positions, panel, 15, 17);
+            knightJump(figure, panel, 15, 17);
             //up down right
-            knightJump(figure, board, positions, panel, 17, 15);
+            knightJump(figure, panel, 17, 15);
 
         } else if (column == 1) {
             //right up down
-            knightJump(figure, board, positions, panel, 10, 6);
+            knightJump(figure, panel, 10, 6);
             //up down right
-            knightJump(figure, board, positions, panel, 17, 15);
+            knightJump(figure, panel, 17, 15);
 
         } else if (column == 2) {
             //right up down
-            knightJump(figure, board, positions, panel, 10, 6);
+            knightJump(figure, panel, 10, 6);
             //up down left
-            knightJump(figure, board, positions, panel, 15, 17);
+            knightJump(figure, panel, 15, 17);
             //up down right
-            knightJump(figure, board, positions, panel, 17, 15);
+            knightJump(figure, panel, 17, 15);
 
         } else if (column == 8) {
             //left up down
-            knightJump(figure, board, positions, panel, 6, 10);
+            knightJump(figure, panel, 6, 10);
             //up down left
-            knightJump(figure, board, positions, panel, 15, 17);
+            knightJump(figure, panel, 15, 17);
 
         } else if (column == 7) {
             //left up down
-            knightJump(figure, board, positions, panel, 6, 10);
+            knightJump(figure, panel, 6, 10);
             //up down left
-            knightJump(figure, board, positions, panel, 15, 17);
+            knightJump(figure, panel, 15, 17);
             //up down right
-            knightJump(figure, board, positions, panel, 17, 15);
+            knightJump(figure, panel, 17, 15);
         }
-
-        result = positions;
-        return null;
     }
 
-    private void knightJump(Figure figure, Board board, List<Position> positions, int panel, int up, int down) {
-        isValid(figure, board, positions, panel - down, 0);
-        isValid(figure, board, positions, panel + up, 0);
+    private void knightJump(Figure figure, int panel, int up, int down) {
+        isValid(figure, new ArrayList<>(), panel - down, 0);
+        isValid(figure, new ArrayList<>(), panel + up, 0);
     }
 
-    private CheckItem getPawnPosition(Figure figure, Board board, Position positionOf) {
+    private CheckItem removePawnPosition(Figure figure, Position positionOf) {
         final List<Position> positions = new ArrayList<>();
 
         int panel = positionOf.getPanel();
@@ -287,8 +264,8 @@ public class CheckValidator {
                 }
             }
 
-            addDiagonalStrike(currentColumn, positions, panel + 9, board, figure);
-            addDiagonalStrike(currentColumn, positions, panel + 7, board, figure);
+            addDiagonalStrike(currentColumn, positions, panel + 9, figure);
+            addDiagonalStrike(currentColumn, positions, panel + 7, figure);
             newPanel = panel + 8;
 
         } else {
@@ -302,8 +279,8 @@ public class CheckValidator {
                     positions.add(position);
                 }
             }
-            addDiagonalStrike(currentColumn, positions, panel - 9, board, figure);
-            addDiagonalStrike(currentColumn, positions, panel - 7, board, figure);
+            addDiagonalStrike(currentColumn, positions, panel - 9, figure);
+            addDiagonalStrike(currentColumn, positions, panel - 7, figure);
         }
 
         //the pawn step one row forward in one direction
@@ -318,7 +295,7 @@ public class CheckValidator {
         return null;
     }
 
-    private boolean addPosition(Collection<Position> positions, Board board, Figure figure, Position newPosition) {
+    private boolean addPosition(Collection<Position> positions, Figure figure, Position newPosition) {
         final Figure boardFigure = board.figureAt(newPosition);
 
         if (boardFigure == null) {
@@ -337,7 +314,7 @@ public class CheckValidator {
         return column == 1 && (newColumn == 7 || newColumn == 8) || column == 8 && (newColumn == 1 || newColumn == 2);
     }
 
-    private void addDiagonalStrike(int currentColumn, List<Position> positions, int panel, Board board, Figure figure) {
+    private void addDiagonalStrike(int currentColumn, List<Position> positions, int panel, Figure figure) {
         if (Position.isInBoard(panel)) {
             final Position position = Position.get(panel);
 
@@ -350,5 +327,14 @@ public class CheckValidator {
                 positions.add(position);
             }
         }
+    }
+
+    private static class CheckItem {
+        private FigureType threat;
+        private Position threatPosition;
+        private List<Position> unblocked = new ArrayList<>();
+        private FigureType blocker = null;
+        private Position blockerPosition = null;
+        private List<Position> blocked = new ArrayList<>();
     }
 }

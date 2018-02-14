@@ -1,7 +1,8 @@
-package chessGame.mechanics;
+package chessGame.mechanics.move;
 
-import chessGame.mechanics.move.Move;
-import chessGame.mechanics.move.PlayerMove;
+import chessGame.mechanics.Color;
+import chessGame.mechanics.FigureType;
+import chessGame.mechanics.Position;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -28,8 +29,6 @@ public class MoveCoder {
 
     private static int figureSize = 3;
     private static int colorSize = 1;
-    private static int inBoardSize = 6;
-    private static int outBoardSize = 1;
     private static int positionSize = 7;
     private static int nullFlagSize = 1;
     private static int moveSize = figureSize + colorSize + 2 * positionSize + nullFlagSize;
@@ -56,6 +55,12 @@ public class MoveCoder {
 
         setToBitSet(set, builder.toString());
         return set;
+    }
+
+    public static String encode(PlayerMove move) {
+        StringBuilder builder = new StringBuilder();
+        encodeMove(move, builder);
+        return builder.toString();
     }
 
     private static void encodeMove(PlayerMove playerMove, StringBuilder builder) {
@@ -169,7 +174,7 @@ public class MoveCoder {
         return moves;
     }
 
-    private static PlayerMove decode(String encodedMove) {
+    public static PlayerMove decode(String encodedMove) {
         Move move = decodeMove(encodedMove, 0, false);
         Move secondary = decodeMove(encodedMove, moveSize, false);
         Move promotion = decodeMove(encodedMove, moveSize * 2, true);
