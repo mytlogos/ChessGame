@@ -298,7 +298,10 @@ class BoardPanel extends StackPane implements Serializable {
     private void initListener() {
         figureViewProperty().addListener((observable, oldFigure, newFigure) -> {
             if (newFigure != null) {
-                getChildren().add(newFigure);
+
+                if (!getChildren().contains(newFigure)) {
+                    getChildren().add(newFigure);
+                }
 
                 if (oldFigure != null) {
                     oldFigure.fitHeightProperty().unbind();

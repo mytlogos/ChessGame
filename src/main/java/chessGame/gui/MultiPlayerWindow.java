@@ -29,15 +29,12 @@ import java.time.Instant;
 /**
  *
  */
-public class OnlineWindow {
+public class MultiPlayerWindow {
     @FXML
     private ListView<MultiPlayer> onlinePlayersView;
 
     @FXML
     private ListView<Chat.Message> chatWindow;
-
-    @FXML
-    private StatusBar statusBar;
 
     @FXML
     private Text playerName;
@@ -76,15 +73,10 @@ public class OnlineWindow {
                     String content;
                     if (item.isHosting()) {
                         content = "Hosting";
-                        setGraphic(new Button());
                     } else if (item.isInGame()) {
                         content = "InGame";
-                        setGraphic(null);
-
                     } else {
                         content = "Idle";
-                        setGraphic(null);
-
                     }
                     setText(content + " " + item.getName());
                 }
@@ -92,7 +84,6 @@ public class OnlineWindow {
         });
 
         onlinePlayersView.setOnMouseClicked(this::acceptHosting);
-//        Platform.runLater(() -> onlinePlayersView.getScene().getWindow().setOnCloseRequest(event -> client.closeClient()));
     }
 
     private Observable[] extractMultiPlayerObservables(MultiPlayer param) {

@@ -158,10 +158,11 @@ public class ChessGameGui {
     private Dialog<MultiPlayerGame> getMultiGameDialog() throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/onlineWindow.fxml"));
         Pane root = loader.load();
-        OnlineWindow controller = loader.getController();
+        MultiPlayerWindow controller = loader.getController();
         controller.setClient(client);
 
         Dialog<MultiPlayerGame> dialog = new Dialog<>();
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
         dialog.initModality(Modality.NONE);
         dialog.getDialogPane().setContent(root);
 

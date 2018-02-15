@@ -1,65 +1,95 @@
-package chessGame.multiplayer;
-
-import chessGame.mechanics.Color;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.SEVERE;
 
 /**
  *
  */
 public class Server extends Thread {
+    private static int port = 4445;
+
     private static Set<String> idlePlayers = new HashSet<>();
     private static List<String> gameHosts = new ArrayList<>();
     private static Map<String, InGame> inGameMap = new HashMap<>();
-    private static Map<String, SocketWrapper> nameWrapperMap = new HashMap<>();
-    private static Map<SocketWrapper, String> wrapperNameMap = new HashMap<>();
+    private static Map<String, ServerSocketWrapper> nameWrapperMap = new HashMap<>();
+    private static Map<ServerSocketWrapper, String> wrapperNameMap = new HashMap<>();
+    private static Logger logger;
     private ServerSocket socket;
+    private static Server server;
 
     private Server() throws IOException {
-        socket = new ServerSocket(PlayerClient.port);
-        setDaemon(true);
+        socket = new ServerSocket(port);
     }
 
-    public static Server startServer() throws IOException {
-        Server server = new Server();
-        server.start();
-        return server;
+    public static void main(String[] args) throws IOException {
+        logger = Logger.getGlobal();
+        logger.addHandler(new FileHandler("serverLog.log", true));
+
+        try {
+            String hostAddress = InetAddress.getLocalHost().getHostAddress();
+
+            try {
+                Socket socket = new Socket(hostAddress, port);
+                socket.close();
+                logger.log(INFO, "Server already up");
+            } catch (IOException e) {
+                startServer();
+            }
+        } catch (IOException e) {
+            logger.log(SEVERE, "error occurred while starting server", e);
+        }
     }
+
+    private static synchronized void shutDownServer() {
+        if (!server.isInterrupted() && server.isAlive()) {
+
+            for (ClientHandler handler : server.handlers) {
+                handler.logOut();
+            }
+
+            server.interrupt();
+        }
+    }
+
+    private static void startServer() throws IOException {
+        server = new Server();
+        server.start();
+    }
+
+    private Collection<ClientHandler> handlers = new ArrayList<>();
 
     @Override
     public void run() {
-        Thread.currentThread().setUncaughtExceptionHandler((thread, e) -> System.err.println("Server crashed: " + e.getMessage()));
+        Thread.currentThread().setUncaughtExceptionHandler((thread, e) -> logger.log(SEVERE, "Server crashed" + e));
         Thread.currentThread().setName("ChessGame-Server");
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                System.out.println("isAwaiting" + " Time: " + LocalTime.now());
                 Socket client = socket.accept();
-                new ClientHandler(client);
-                System.out.println("Started Listening to Socket " + client);
+                ClientHandler handler = new ClientHandler(client);
+                handlers.add(handler);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    @Override
-    protected void finalize() {
-        System.out.println("finalized?");
-    }
-
     private static class ClientHandler extends Thread {
         private static int counter = 0;
-        SocketWrapper wrapper;
+        ServerSocketWrapper wrapper;
 
         private ClientHandler(Socket socket) throws IOException {
-            wrapper = new SocketWrapper(socket);
+            wrapper = new ServerSocketWrapper(socket);
             wrapper.writeGuestName(allocateGuestName());
             setDaemon(true);
             start();
@@ -112,13 +142,13 @@ public class Server extends Thread {
                     } else if (wrapper.isMove(line)) {
                         propagateMove(line);
 
+                    } else if (wrapper.isShutDown(line)) {
+                        shutDownServer();
+
                     } else {
-                        System.err.println("Unknown Message received on Server: " + line + " Time: " + LocalTime.now());
+                        logger.log(INFO, "Unknown Message received on Server: " + line + "  at: " + LocalTime.now());
                     }
                 }
-
-                System.out.println("listening on server side stopped" + " Time: " + LocalTime.now());
-                System.out.println("interrupted: " + Thread.currentThread().isInterrupted());
             } catch (IOException e) {
                 //log out wrapper on exception
                 logOut();
@@ -127,23 +157,22 @@ public class Server extends Thread {
         }
 
         private void logIn(String line) {
-            String name = wrapper.getPlayer(line).getName();
+            String name = wrapper.getPlayer(line);
 
             if (nameWrapperMap.containsKey(name)) {
-                System.out.println("Server Side: name is already allocated");
+                logger.log(SEVERE, "Name " + name + " is already allocated");
             } else {
                 nameWrapperMap.put(name, wrapper);
                 wrapperNameMap.put(wrapper, name);
                 idlePlayers.add(name);
 
-                for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                     socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
                 }
             }
         }
 
-        private void propagateMessage(String line) {
-            Chat.Message message = wrapper.getMessage(line);
+        private void propagateMessage(String message) {
             String player = wrapperNameMap.get(wrapper);
 
             InGame inGame = inGameMap.get(player);
@@ -166,12 +195,10 @@ public class Server extends Thread {
             if (hostingPlayer != null) {
                 gameHosts.add(hostingPlayer);
             } else {
-                System.err.println("Missing Name!");
+                logger.warning("Missing Name for Wrapper");
             }
 
-            System.out.println("Player " + hostingPlayer + " started hosting");
-
-            for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                 socketWrapper.writeHosts(gameHosts);
             }
         }
@@ -182,37 +209,36 @@ public class Server extends Thread {
             if (gameHosts.contains(acceptedHost)) {
 
                 if (inGameMap.containsKey(acceptedHost)) {
-                    System.err.println("Host is already playing");
                     wrapper.writeStartFailed();
 
                     gameHosts.remove(acceptedHost);
 
-                    for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+                    for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                         socketWrapper.writeHosts(gameHosts);
                     }
                     return;
                 }
 
-                SocketWrapper hostWrapper = nameWrapperMap.get(acceptedHost);
+                ServerSocketWrapper hostWrapper = nameWrapperMap.get(acceptedHost);
                 String acceptingPlayer = wrapperNameMap.get(wrapper);
 
                 if (hostWrapper == null || acceptingPlayer == null) {
-                    System.err.println("Missing Data on Server. Game failed to start");
+                    logger.warning("Missing Data on Server. Game failed to start, Wrapper: " + hostWrapper + " acceptingPlayer: " + acceptingPlayer + " acceptedHost: " + acceptedHost);
                     wrapper.writeStartFailed();
                 } else {
                     InGame inGame = new InGame(acceptingPlayer, acceptedHost);
                     inGameMap.put(acceptedHost, inGame);
                     inGameMap.put(acceptingPlayer, inGame);
 
-                    wrapper.writeStartGame(acceptedHost, Color.WHITE);
-                    hostWrapper.writeStartGame(acceptingPlayer, Color.BLACK);
+                    wrapper.writeStartGame(acceptedHost, true);
+                    hostWrapper.writeStartGame(acceptingPlayer, false);
 
                     idlePlayers.remove(acceptedHost);
                     idlePlayers.remove(acceptingPlayer);
 
                     gameHosts.remove(acceptedHost);
 
-                    for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+                    for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                         socketWrapper.writeInGameList(inGameMap.keySet());
                         socketWrapper.writeHosts(gameHosts);
                     }
@@ -228,9 +254,7 @@ public class Server extends Thread {
 
             InGame inGame = inGameMap.remove(playerName);
 
-            if (inGame == null) {
-                System.out.println("Game already removed");
-            } else {
+            if (inGame != null) {
                 String player1 = inGame.player1;
                 String player2 = inGame.player2;
 
@@ -240,7 +264,7 @@ public class Server extends Thread {
                 idlePlayers.add(player1);
                 idlePlayers.add(player2);
 
-                for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                     socketWrapper.writeInGameList(inGameMap.keySet());
                 }
             }
@@ -251,7 +275,7 @@ public class Server extends Thread {
 
             gameHosts.remove(terminator);
 
-            for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                 socketWrapper.writeHosts(gameHosts);
             }
         }
@@ -261,7 +285,7 @@ public class Server extends Thread {
             nameWrapperMap.remove(player);
             idlePlayers.remove(player);
 
-            for (SocketWrapper socketWrapper : nameWrapperMap.values()) {
+            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                 socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
             }
 
@@ -273,7 +297,7 @@ public class Server extends Thread {
             InGame inGame = inGameMap.get(ownPlayer);
 
             if (inGame == null) {
-                System.err.println("Illegal State: Made Move on non existent game.");
+                logger.warning("Illegal State: Made Move on non existent game.");
             } else {
                 String opponent = getOpponent(ownPlayer, inGame);
                 nameWrapperMap.get(opponent).writeMove(line);

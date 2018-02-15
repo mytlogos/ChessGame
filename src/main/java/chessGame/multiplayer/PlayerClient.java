@@ -22,11 +22,8 @@ import java.util.stream.Collectors;
  *
  */
 public class PlayerClient implements Runnable {
-    //the server ip, at the moment the ip of one of the devices starting the game
-    public static String serverHost = "xxx.xxx.x.x";
-    public static int port = 4445;
 
-    private final SocketWrapper wrapper;
+    private final ClientSocketWrapper wrapper;
     private final BooleanProperty startFailed = new SimpleBooleanProperty();
     private final Chat allChat = new Chat();
     private ObjectProperty<MultiPlayerGame> game = new SimpleObjectProperty<>();
@@ -43,7 +40,11 @@ public class PlayerClient implements Runnable {
     private PlayerMove lastReceived = null;
 
     public PlayerClient() throws IOException {
-        this.wrapper = new SocketWrapper(new Socket(serverHost, port));
+        int port = 4445;
+
+        //the ip of your server
+        String serverHost = "";
+        this.wrapper = new ClientSocketWrapper(new Socket(serverHost, port));
 
         socketListener = new Thread(this);
         socketListener.setDaemon(true);
@@ -80,11 +81,6 @@ public class PlayerClient implements Runnable {
 
     private ObservableList<String> getHostingPlayers() {
         return hostingPlayers;
-    }
-
-    public static boolean isServerHost() throws UnknownHostException {
-        String hostAddress = InetAddress.getLocalHost().getHostAddress();
-        return hostAddress.equals(PlayerClient.serverHost);
     }
 
     public StringProperty playerNameProperty() {
@@ -147,8 +143,8 @@ public class PlayerClient implements Runnable {
 
                 } else if (wrapper.isGameStarting(line)) {
                     String opponent = wrapper.getGamePartner(line);
-                    String color = wrapper.getGameColor(line);
-                    startGame(opponent, Color.valueOf(color));
+                    boolean isWhite = wrapper.getGameColor(line);
+                    startGame(opponent, isWhite ? Color.WHITE : Color.BLACK);
 
                 } else if (wrapper.isPlayerList(line)) {
                     Collection<String> playerList = wrapper.getPlayerList(line);
@@ -172,29 +168,6 @@ public class PlayerClient implements Runnable {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private void setHosts(Collection<String> playerList) {
-        Platform.runLater(() -> {
-            hostingPlayers.setAll(playerList);
-
-            MultiPlayer player = getPlayer();
-
-            if (player != null) {
-                player.setHosting(playerList.contains(player.getName()));
-            }
-        });
-    }
-
-    private void setInGameList(Collection<String> playerList) {
-        Platform.runLater(() -> {
-            inGamePlayers.setAll(playerList);
-            MultiPlayer player = getPlayer();
-
-            if (player != null) {
-                player.setInGame(playerList.contains(player.getName()));
-            }
-        });
     }
 
     public String getPlayerName() {
@@ -277,12 +250,31 @@ public class PlayerClient implements Runnable {
         setGame(game);
     }
 
-    public MultiPlayer getPlayer() {
-        return player.get();
+    private void setHosts(Collection<String> playerList) {
+        Platform.runLater(() -> {
+            hostingPlayers.setAll(playerList);
+
+            MultiPlayer player = getPlayer();
+
+            if (player != null) {
+                player.setHosting(playerList.contains(player.getName()));
+            }
+        });
     }
 
-    public ObjectProperty<MultiPlayer> playerProperty() {
-        return player;
+    private void setInGameList(Collection<String> playerList) {
+        Platform.runLater(() -> {
+            inGamePlayers.setAll(playerList);
+            MultiPlayer player = getPlayer();
+
+            if (player != null) {
+                player.setInGame(playerList.contains(player.getName()));
+            }
+        });
+    }
+
+    public MultiPlayer getPlayer() {
+        return player.get();
     }
 
     private boolean isStartFailed() {
@@ -291,6 +283,10 @@ public class PlayerClient implements Runnable {
 
     public void setStartFailed(boolean startFailed) {
         Platform.runLater(() -> this.startFailed.set(startFailed));
+    }
+
+    public ObjectProperty<MultiPlayer> playerProperty() {
+        return player;
     }
 
     public MultiPlayerGame getGame() {
@@ -317,7 +313,7 @@ public class PlayerClient implements Runnable {
         return gameChat;
     }
 
-    SocketWrapper getWrapper() {
+    ClientSocketWrapper getWrapper() {
         return wrapper;
     }
 

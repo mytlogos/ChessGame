@@ -9,7 +9,7 @@
 <?import javafx.scene.text.Text?>
 
 
-<VBox xmlns="http://javafx.com/javafx/" xmlns:fx="http://javafx.com/fxml/" fx:controller="chessGame.gui.OnlineWindow">
+<VBox xmlns="http://javafx.com/javafx/" xmlns:fx="http://javafx.com/fxml/" fx:controller="chessGame.gui.MultiPlayerWindow">
     <children>
         <HBox alignment="CENTER_LEFT" spacing="5.0">
             <children>
