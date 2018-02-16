@@ -2,6 +2,7 @@ package chessGame.mechanics;
 
 import chessGame.mechanics.board.ArrayBoard;
 import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.ChessGameImpl;
 import chessGame.mechanics.game.Game;
 import chessGame.mechanics.move.Move;
@@ -38,7 +39,7 @@ public abstract class BoardEncoder {
     public static BitSet encode(Game game) {
         BitSet set = new BitSet(maxSize);
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         for (int panel = 0; panel < 64; panel++) {
             Figure figure = board.figureAt(Position.get(panel));
@@ -168,8 +169,8 @@ public abstract class BoardEncoder {
         setGameParameter(set, game);
     }
 
-    public static Board getBoard(BitSet set) {
-        Board board = new ArrayBoard();
+    public static FigureBoard getBoard(BitSet set) {
+        FigureBoard board = new ArrayBoard();
 
         for (int panel = 0; panel < 64; panel++) {
             Position position = Position.get(panel);
@@ -235,7 +236,7 @@ public abstract class BoardEncoder {
     }
 
     public static Game decode(BitSet set) {
-        Board board = getBoard(set);
+        FigureBoard board = getBoard(set);
 
         ChessGameImpl chessGame = new ChessGameImpl(board, set);
 

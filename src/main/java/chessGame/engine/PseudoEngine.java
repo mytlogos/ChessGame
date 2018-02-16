@@ -1,7 +1,7 @@
 package chessGame.engine;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.board.BoardSnapShot;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.move.MoveForGenerator;
@@ -14,15 +14,15 @@ import java.util.function.Function;
 /**
  *
  */
-public class DerivedEngine extends Engine {
+public class PseudoEngine extends Engine {
     private final Map<EngineMove, SearchItem> searchItemMap = Collections.synchronizedMap(new HashMap<>());
 
 
-    DerivedEngine(ChessGame game, Player player, int maxDepth) {
+    PseudoEngine(ChessGame game, Player player, int maxDepth) {
         super(game, player, maxDepth);
     }
 
-    DerivedEngine(ChessGame game, Player player) {
+    PseudoEngine(ChessGame game, Player player) {
         super(game, player);
     }
 
@@ -132,12 +132,12 @@ public class DerivedEngine extends Engine {
     }
 
 
-    private double evaluateBoard(Board before, Board after, PlayerMove move) {
-//        final int whiteSum = getDominationSum(before, Board::getWhite);
-//        final int blackSum = getDominationSum(before, Board::getBlack);
+    private double evaluateBoard(FigureBoard before, FigureBoard after, PlayerMove move) {
+//        final int whiteSum = getDominationSum(before, Board<Figure>::getWhite);
+//        final int blackSum = getDominationSum(before, Board<Figure>::getBlack);
 //
-//        final int afterWhiteSum = getDominationSum(after, Board::getWhite);
-//        final int afterBlackSum = getDominationSum(after, Board::getBlack);
+//        final int afterWhiteSum = getDominationSum(after, Board<Figure>::getWhite);
+//        final int afterBlackSum = getDominationSum(after, Board<Figure>::getBlack);
 //
 //        final int dominationBefore = difference(move.getColor().isWhite(), blackSum, whiteSum);
 //        final int dominationAfter = difference(move.getColor().isWhite(), afterBlackSum, afterWhiteSum);
@@ -179,7 +179,7 @@ public class DerivedEngine extends Engine {
         return isWhite ? whiteSum - blackSum : blackSum - whiteSum;
     }
 
-    private int getDominationSum(Board board, Function<ChessGame, Color> playerFunction) {
+    private int getDominationSum(FigureBoard board, Function<ChessGame, Color> playerFunction) {
         final List<Figure> figures = board.getFigures(playerFunction.apply(game));
         return figures.stream().mapToInt(figure -> PositionGenerator.getAllowedPositions(figure, board).size()).sum();
 

@@ -21,7 +21,7 @@ public class GameImpl implements Game {
     List<PlayerMove> allowedMoves;
     Player atMove;
     Timer timer;
-    private Board board;
+    private FigureBoard board;
     private MoveHistory history;
     private Map<Color, Map<FigureType, List<Figure>>> bench = new HashMap<>();
     private Map<Color, List<Figure>> promoted = new HashMap<>();
@@ -59,7 +59,7 @@ public class GameImpl implements Game {
         snapShot = BoardEncoder.encode(this);
     }
 
-    GameImpl(Board board, BitSet set) {
+    GameImpl(FigureBoard board, BitSet set) {
         Objects.requireNonNull(board);
 
         this.black = Player.getBlack();
@@ -246,7 +246,7 @@ public class GameImpl implements Game {
     }
 
     @Override
-    public Board getBoard() {
+    public FigureBoard getBoard() {
         return board;
     }
 

@@ -2,7 +2,7 @@ package chessGame.mechanics.move;
 
 import chessGame.mechanics.Figure;
 import chessGame.mechanics.Position;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,27 +12,27 @@ import java.util.Objects;
 import static chessGame.mechanics.FigureType.*;
 
 /**
- * A Position generator. Has only the static Method {@link #getAllowedPositions(Figure, Board)}.
+ * A Position generator. Has only the static Method {@link #getAllowedPositions(Figure, FigureBoard)}.
  * Is abstract.
  */
 public abstract class PositionGenerator {
 
     /**
-     * Generates a List of allowed Positions for a given Figure on the given Board.
+     * Generates a List of allowed Positions for a given Figure on the given Board<Figure>.
      * Does not pay attention to Checks or special moves.
      *
      * @param figure a figure, not null
      * @param board  a board, not null
      * @return a List of allowed Positions, or empty if none are possible
      */
-    public static List<Position> getAllowedPositions(Figure figure, Board board) {
+    public static List<Position> getAllowedPositions(Figure figure, FigureBoard board) {
         Objects.requireNonNull(figure);
         Objects.requireNonNull(board);
 
         return getPositions(figure, board, false);
     }
 
-    private static List<Position> getPositions(Figure figure, Board board, boolean inclusive) {
+    private static List<Position> getPositions(Figure figure, FigureBoard board, boolean inclusive) {
         final List<Position> result;
 
         Position position = board.positionOf(figure);
@@ -90,7 +90,7 @@ public abstract class PositionGenerator {
         return result;
     }
 
-    private static List<Position> getDiagonal(int max, Figure figure, Board board, Position position, boolean inclusive) {
+    private static List<Position> getDiagonal(int max, Figure figure, FigureBoard board, Position position, boolean inclusive) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -121,7 +121,7 @@ public abstract class PositionGenerator {
         return positions;
     }
 
-    private static boolean isValid(Figure figure, Board board, List<Position> positions, int newPanel, int limit, boolean inclusive) {
+    private static boolean isValid(Figure figure, FigureBoard board, List<Position> positions, int newPanel, int limit, boolean inclusive) {
         if (Position.isInBoard(newPanel)) {
             Position newPosition = Position.get(newPanel);
 
@@ -135,7 +135,7 @@ public abstract class PositionGenerator {
         return true;
     }
 
-    private static List<Position> getHorizontal(int max, Figure figure, Board board, Position position, boolean inclusive) {
+    private static List<Position> getHorizontal(int max, Figure figure, FigureBoard board, Position position, boolean inclusive) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -155,7 +155,7 @@ public abstract class PositionGenerator {
         return positions;
     }
 
-    private static List<Position> getVertical(int max, Figure figure, Board board, Position position, boolean inclusive) {
+    private static List<Position> getVertical(int max, Figure figure, FigureBoard board, Position position, boolean inclusive) {
         List<Position> positions = new ArrayList<>();
 
         int panel = position.getPanel();
@@ -176,7 +176,7 @@ public abstract class PositionGenerator {
         return positions;
     }
 
-    private static List<Position> getKnightPositions(Figure figure, Board board, Position position, boolean inclusive) {
+    private static List<Position> getKnightPositions(Figure figure, FigureBoard board, Position position, boolean inclusive) {
         List<Position> result;
         List<Position> positions = new ArrayList<>();
 
@@ -227,12 +227,12 @@ public abstract class PositionGenerator {
         return result;
     }
 
-    private static void knightJump(Figure figure, Board board, List<Position> positions, int panel, int up, int down, boolean inclusive) {
+    private static void knightJump(Figure figure, FigureBoard board, List<Position> positions, int panel, int up, int down, boolean inclusive) {
         isValid(figure, board, positions, panel - down, 0, inclusive);
         isValid(figure, board, positions, panel + up, 0, inclusive);
     }
 
-    private static List<Position> getPawnPosition(Figure figure, Board board, Position positionOf, boolean inclusive) {
+    private static List<Position> getPawnPosition(Figure figure, FigureBoard board, Position positionOf, boolean inclusive) {
         final List<Position> positions = new ArrayList<>();
 
         int panel = positionOf.getPanel();
@@ -283,7 +283,7 @@ public abstract class PositionGenerator {
         return positions;
     }
 
-    private static boolean addPosition(Collection<Position> positions, Board board, Figure figure, Position newPosition, boolean inclusive) {
+    private static boolean addPosition(Collection<Position> positions, FigureBoard board, Figure figure, Position newPosition, boolean inclusive) {
         final Figure boardFigure = board.figureAt(newPosition);
 
         if (boardFigure == null) {
@@ -302,7 +302,7 @@ public abstract class PositionGenerator {
         return column == 1 && (newColumn == 7 || newColumn == 8) || column == 8 && (newColumn == 1 || newColumn == 2);
     }
 
-    private static void addDiagonalStrike(int currentColumn, List<Position> positions, int panel, Board board, Figure figure, boolean inclusive) {
+    private static void addDiagonalStrike(int currentColumn, List<Position> positions, int panel, FigureBoard board, Figure figure, boolean inclusive) {
         if (Position.isInBoard(panel)) {
             final Position position = Position.get(panel);
 
@@ -317,7 +317,7 @@ public abstract class PositionGenerator {
         }
     }
 
-    public static List<Position> getPositions(Figure figure, Board board) {
+    public static List<Position> getPositions(Figure figure, FigureBoard board) {
         Objects.requireNonNull(figure);
         Objects.requireNonNull(board);
 

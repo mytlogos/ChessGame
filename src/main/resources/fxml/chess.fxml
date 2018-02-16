@@ -42,7 +42,7 @@
                     <MenuItem mnemonicParsing="false" text="About" />
                 </Menu>
             </MenuBar>
-            <HBox spacing="5.0">
+            <HBox fx:id="topContainer" alignment="CENTER" spacing="5.0">
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                 </padding>

@@ -1,15 +1,30 @@
-package chessGame.gui;
+package chessGame.gui.multiplayer;
 
 import chessGame.multiplayer.Chat;
 import javafx.scene.control.ListCell;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  *
  */
-public class MessageCell extends ListCell<Chat.Message> {
+class MessageCell extends ListCell<Chat.Message> {
+    private HBox container;
+    private Text timeStamp;
+    private Text content;
+    private Text name;
+
+
+    MessageCell() {
+        container = new HBox();
+        container.setSpacing(5);
+    }
+
 
     @Override
     protected void updateItem(Chat.Message item, boolean empty) {

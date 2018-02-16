@@ -1,7 +1,7 @@
 package chessGame.mechanics.board;
 
-import chessGame.mechanics.Figure;
 import chessGame.mechanics.Color;
+import chessGame.mechanics.Figure;
 import chessGame.mechanics.Position;
 
 import java.util.*;
@@ -91,16 +91,8 @@ public class ArrayBoard extends AbstractBoard{
     }
 
     @Override
-    public BoardSnapShot getSnapShot() {
-        String[] snapshot = new String[64];
-
-        for (int i = 0; i < board.length; i++) {
-            Figure figure = board[i];
-            if (figure != null) {
-                snapshot[i] = getNotation(figure);
-            }
-        }
-        return new BoardSnapShot(snapshot);
+    public int hashCode() {
+        return Arrays.hashCode(board);
     }
 
     @Override
@@ -112,11 +104,6 @@ public class ArrayBoard extends AbstractBoard{
 
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(board, figures.board);
-    }
-
-    @Override
-    public int hashCode() {
-        return Arrays.hashCode(board);
     }
 }
 

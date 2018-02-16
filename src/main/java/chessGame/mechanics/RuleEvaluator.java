@@ -1,6 +1,6 @@
 package chessGame.mechanics;
 
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.Game;
 import chessGame.mechanics.move.MoveForGenerator;
 import chessGame.mechanics.move.MoveHistory;
@@ -35,7 +35,7 @@ public abstract class RuleEvaluator {
      * @return returns the endGame conclusion as {@link End}, not null
      * */
     public static End checkEndGame(Game game, Color player) {
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         Color enemy = Color.getEnemy(player);
         List<PlayerMove> enemyMoves = MoveForGenerator.getAllowedMoves(enemy, game);
@@ -65,7 +65,7 @@ public abstract class RuleEvaluator {
      * @return false if it is possible to checkMate, else true
      */
     private static boolean checkImpossibleCheckMate(Game game) {
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         List<Figure> whiteFigures = board.getFigures(game.getWhite().getColor());
         List<Figure> blackFigures = board.getFigures(game.getBlack().getColor());
@@ -99,7 +99,7 @@ public abstract class RuleEvaluator {
     }
 
     /**
-     * The Threefold Repetition Rule says that a Set of Positions (A Board)
+     * The Threefold Repetition Rule says that a Set of Positions (A Board<Figure>)
      * can only occur up to 3 times?
      *
      * @return zero if this rule is not implicated, else -500 for draw

@@ -1,5 +1,7 @@
 package chessGame.gui;
 
+import chessGame.gui.multiplayer.ChatWindow;
+import chessGame.gui.multiplayer.MultiPlayerWindow;
 import chessGame.mechanics.Color;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.game.ChessGame;
@@ -18,6 +20,7 @@ import javafx.scene.control.Dialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.LineTo;
@@ -36,6 +39,9 @@ import java.util.Optional;
 public class ChessGameGui {
     private final Path arrow = getArrow();
     private final ObjectProperty<ChessGame> currentGame = new SimpleObjectProperty<>();
+
+    @FXML
+    private HBox topContainer;
     @FXML
     private VBox whitePlayer;
     @FXML
@@ -104,6 +110,7 @@ public class ChessGameGui {
     void showPlayerAtMove(Player player) {
         blackPlayerArrow.getChildren().clear();
         whitePlayerArrow.getChildren().clear();
+
         if (!player.isWhite()) {
             blackPlayerArrow.getChildren().add(arrow);
 
@@ -129,6 +136,10 @@ public class ChessGameGui {
         }
     }
 
+    PlayerClient getClient() {
+        return client;
+    }
+
     @FXML
     private void startMultiPlay() throws IOException {
         if (client == null) {
@@ -149,10 +160,6 @@ public class ChessGameGui {
         } else {
             showNoNewGameAlert();
         }
-    }
-
-    PlayerClient getClient() {
-        return client;
     }
 
     private Dialog<MultiPlayerGame> getMultiGameDialog() throws IOException {

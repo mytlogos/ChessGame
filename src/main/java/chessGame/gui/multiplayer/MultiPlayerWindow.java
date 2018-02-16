@@ -1,18 +1,12 @@
-package chessGame.gui;
+package chessGame.gui.multiplayer;
 
 import chessGame.multiplayer.Chat;
 import chessGame.multiplayer.MultiPlayer;
 import chessGame.multiplayer.PlayerClient;
-import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.binding.Bindings;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.scene.control.Button;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
@@ -22,7 +16,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
-import org.controlsfx.control.StatusBar;
 
 import java.time.Instant;
 
@@ -52,45 +45,14 @@ public class MultiPlayerWindow {
         playerName.textProperty().bind(client.playerNameProperty());
 
         ObservableList<Chat.Message> messages = this.client.getAllChat().getMessages();
-        Bindings.bindContent(chatWindow.getItems(), messages);
-        Bindings.bindContent(onlinePlayersView.getItems(), client.getOnlinePlayerList());
+        chatWindow.setItems(messages);
+        onlinePlayersView.setItems(client.getOnlinePlayerList());
     }
 
     public void initialize() {
-        chatWindow.setCellFactory(param -> new MessageCell());
-        onlinePlayersView.setItems(FXCollections.observableArrayList(this::extractMultiPlayerObservables));
-
-        onlinePlayersView.setCellFactory(param -> new ListCell<MultiPlayer>() {
-
-            @Override
-            protected void updateItem(MultiPlayer item, boolean empty) {
-                super.updateItem(item, empty);
-
-                if (item == null || empty) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    String content;
-                    if (item.isHosting()) {
-                        content = "Hosting";
-                    } else if (item.isInGame()) {
-                        content = "InGame";
-                    } else {
-                        content = "Idle";
-                    }
-                    setText(content + " " + item.getName());
-                }
-            }
-        });
-
+        chatWindow.setCellFactory(param -> new ChatBubble());
+        onlinePlayersView.setCellFactory(param -> new MultiPlayerCell());
         onlinePlayersView.setOnMouseClicked(this::acceptHosting);
-    }
-
-    private Observable[] extractMultiPlayerObservables(MultiPlayer param) {
-        Observable[] observables = new Observable[2];
-        observables[0] = param.hostingProperty();
-        observables[1] = param.inGameProperty();
-        return observables;
     }
 
     @FXML

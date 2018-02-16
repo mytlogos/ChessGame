@@ -12,7 +12,6 @@ class ServerSocketWrapper {
     private static final String playerLogIn = "PLAYERLOGIN";
     private static final String playerList = "PLAYERLIST";
     private static final String separator = "$";
-    private static final String gameEnd = "GAMEOVER";
     private static final String startGame = "GAMESTART";
     private static final String startGameFailed = "GAMESTARTFAILED";
     private static final String chat = "CHAT";
@@ -27,6 +26,7 @@ class ServerSocketWrapper {
     private static final String inGameList = "INGAMELIST";
     private static final String whiteColor = "WHITE";
     private static final String blackColor = "BLACK";
+    private static final String gameInterrupted = "GAMEINTERRUPT";
     private static final String shutDown = "ShutdownServer";
 
     private final OutputStream outputStream;
@@ -39,6 +39,14 @@ class ServerSocketWrapper {
 
     boolean isShutDown(String line) {
         return line.equals(shutDown);
+    }
+
+    boolean isGameInterrupted(String line) {
+        return line.startsWith(gameInterrupted);
+    }
+
+    void interruptGame() {
+        write(gameInterrupted);
     }
 
     boolean isRename(String line) {
@@ -84,7 +92,7 @@ class ServerSocketWrapper {
     }
 
     boolean isGameEnd(String line) {
-        return line.startsWith(gameEnd);
+        return !line.substring(line.lastIndexOf(separator) + 1).isEmpty();
     }
 
     boolean isAccepting(String line) {

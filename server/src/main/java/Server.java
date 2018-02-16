@@ -4,7 +4,6 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
@@ -16,19 +15,27 @@ import static java.util.logging.Level.SEVERE;
  *
  */
 public class Server extends Thread {
+    private final static Set<String> idlePlayers = Collections.synchronizedSet(new HashSet<>());
+    private final static Set<String> gameHosts = Collections.synchronizedSet(new HashSet<>());
+    private final static Map<String, InGame> inGameMap = Collections.synchronizedMap(new HashMap<>());
+    private final static Map<String, ServerSocketWrapper> nameWrapperMap = Collections.synchronizedMap(new HashMap<>());
+    private final static Map<ServerSocketWrapper, String> wrapperNameMap = Collections.synchronizedMap(new HashMap<>());
     private static int port = 4445;
-
-    private static Set<String> idlePlayers = new HashSet<>();
-    private static List<String> gameHosts = new ArrayList<>();
-    private static Map<String, InGame> inGameMap = new HashMap<>();
-    private static Map<String, ServerSocketWrapper> nameWrapperMap = new HashMap<>();
-    private static Map<ServerSocketWrapper, String> wrapperNameMap = new HashMap<>();
     private static Logger logger;
-    private ServerSocket socket;
     private static Server server;
+
+    private final ServerSocket socket;
+    private final Thread queueManager;
+    private final int serverLimit = 500;
+    private final Collection<ClientHandler> handlers = Collections.synchronizedList(new ArrayList<>(serverLimit));
+    private final Queue<Socket> queuedSockets = new ArrayDeque<>();
+    private boolean isShutDown = false;
 
     private Server() throws IOException {
         socket = new ServerSocket(port);
+        queueManager = new Thread(new QueueManager());
+        queueManager.setDaemon(true);
+        queueManager.start();
     }
 
     public static void main(String[] args) throws IOException {
@@ -50,23 +57,10 @@ public class Server extends Thread {
         }
     }
 
-    private static synchronized void shutDownServer() {
-        if (!server.isInterrupted() && server.isAlive()) {
-
-            for (ClientHandler handler : server.handlers) {
-                handler.logOut();
-            }
-
-            server.interrupt();
-        }
-    }
-
     private static void startServer() throws IOException {
         server = new Server();
         server.start();
     }
-
-    private Collection<ClientHandler> handlers = new ArrayList<>();
 
     @Override
     public void run() {
@@ -75,12 +69,40 @@ public class Server extends Thread {
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                Socket client = socket.accept();
-                ClientHandler handler = new ClientHandler(client);
-                handlers.add(handler);
+                Socket clientSocket = socket.accept();
+
+                if (handlers.size() < serverLimit) {
+                    ClientHandler handler = new ClientHandler(clientSocket);
+                    handlers.add(handler);
+                } else {
+                    queuedSockets.add(clientSocket);
+                }
+
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                logger.log(SEVERE, "error occurred on server", e);
+                shutDownServer();
             }
+        }
+    }
+
+    private static synchronized void shutDownServer() {
+        if (!server.isShutDown) {
+
+            synchronized (server.handlers) {
+                for (ClientHandler handler : server.handlers) {
+                    handler.logOut();
+                }
+            }
+
+            server.queueManager.interrupt();
+            server.interrupt();
+            try {
+                server.socket.close();
+            } catch (IOException e) {
+                logger.log(SEVERE, "error in closing socket", e);
+            }
+
+            server.isShutDown = true;
         }
     }
 
@@ -100,9 +122,11 @@ public class Server extends Thread {
             int counter = 1;
             String name = guest + counter;
 
-            while (nameWrapperMap.keySet().contains(name)) {
-                counter++;
-                name = guest + counter;
+            synchronized (nameWrapperMap) {
+                while (nameWrapperMap.keySet().contains(name)) {
+                    counter++;
+                    name = guest + counter;
+                }
             }
             return name;
         }
@@ -116,8 +140,6 @@ public class Server extends Thread {
 
                 //listen as long as it does not read null or thread is interrupted
                 while (!Thread.currentThread().isInterrupted() && (line = reader.readLine()) != null) {
-                    System.out.println(Thread.currentThread().getName() + " read: " + line);
-
                     if (wrapper.isPlayerLogin(line)) {
                         logIn(line);
 
@@ -129,9 +151,6 @@ public class Server extends Thread {
 
                     } else if (wrapper.isAccepting(line)) {
                         acceptGame(line);
-
-                    } else if (wrapper.isGameEnd(line)) {
-                        endGame();
 
                     } else if (wrapper.isHostingTerminated(line)) {
                         terminateHosting();
@@ -145,14 +164,53 @@ public class Server extends Thread {
                     } else if (wrapper.isShutDown(line)) {
                         shutDownServer();
 
+                    } else if (wrapper.isRename(line)) {
+                        propagateNewName(line);
+
                     } else {
-                        logger.log(INFO, "Unknown Message received on Server: " + line + "  at: " + LocalTime.now());
+                        logger.log(INFO, "Unknown Message received on Server: " + line);
                     }
                 }
             } catch (IOException e) {
                 //log out wrapper on exception
                 logOut();
                 throw new RuntimeException(e);
+            }
+        }
+
+        private void propagateNewName(String line) {
+            String newName = wrapper.getNewName(line);
+            String oldName = wrapperNameMap.remove(wrapper);
+
+            nameWrapperMap.remove(oldName);
+            nameWrapperMap.put(newName, wrapper);
+
+            InGame inGame = inGameMap.remove(oldName);
+
+            if (inGame != null) {
+                if (inGame.player1.equals(oldName)) {
+                    inGame.player1 = newName;
+                } else if (inGame.player2.equals(oldName)) {
+                    inGame.player2 = newName;
+                }
+
+                inGameMap.put(newName, inGame);
+            }
+
+            if (gameHosts.remove(oldName)) {
+                gameHosts.add(newName);
+            }
+
+            if (idlePlayers.remove(oldName)) {
+                idlePlayers.add(newName);
+            }
+
+            synchronized (wrapperNameMap) {
+                for (ServerSocketWrapper socketWrapper : wrapperNameMap.keySet()) {
+                    socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
+                    socketWrapper.writeHosts(gameHosts);
+                    socketWrapper.writeInGameList(inGameMap.keySet());
+                }
             }
         }
 
@@ -166,8 +224,12 @@ public class Server extends Thread {
                 wrapperNameMap.put(wrapper, name);
                 idlePlayers.add(name);
 
-                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
-                    socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
+                synchronized (wrapperNameMap) {
+                    for (ServerSocketWrapper socketWrapper : wrapperNameMap.keySet()) {
+                        socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
+                        socketWrapper.writeHosts(gameHosts);
+                        socketWrapper.writeInGameList(inGameMap.keySet());
+                    }
                 }
             }
         }
@@ -198,15 +260,19 @@ public class Server extends Thread {
                 logger.warning("Missing Name for Wrapper");
             }
 
-            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
-                socketWrapper.writeHosts(gameHosts);
+            synchronized (nameWrapperMap) {
+                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
+                    socketWrapper.writeHosts(gameHosts);
+                }
             }
+
         }
 
         private synchronized void acceptGame(String line) {
             String acceptedHost = wrapper.getAcceptedHost(line);
 
             if (gameHosts.contains(acceptedHost)) {
+
 
                 if (inGameMap.containsKey(acceptedHost)) {
                     wrapper.writeStartFailed();
@@ -219,8 +285,8 @@ public class Server extends Thread {
                     return;
                 }
 
-                ServerSocketWrapper hostWrapper = nameWrapperMap.get(acceptedHost);
                 String acceptingPlayer = wrapperNameMap.get(wrapper);
+                ServerSocketWrapper hostWrapper = nameWrapperMap.get(acceptedHost);
 
                 if (hostWrapper == null || acceptingPlayer == null) {
                     logger.warning("Missing Data on Server. Game failed to start, Wrapper: " + hostWrapper + " acceptingPlayer: " + acceptingPlayer + " acceptedHost: " + acceptedHost);
@@ -237,6 +303,7 @@ public class Server extends Thread {
                     idlePlayers.remove(acceptingPlayer);
 
                     gameHosts.remove(acceptedHost);
+                    gameHosts.remove(acceptingPlayer);
 
                     for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
                         socketWrapper.writeInGameList(inGameMap.keySet());
@@ -246,26 +313,28 @@ public class Server extends Thread {
             } else {
                 wrapper.writeStartFailed();
             }
-
         }
 
         private void endGame() {
+            //todo for the case if the other player never ends game for whatever reason, end it forcefully
             String playerName = wrapperNameMap.get(wrapper);
 
             InGame inGame = inGameMap.remove(playerName);
 
             if (inGame != null) {
-                String player1 = inGame.player1;
                 String player2 = inGame.player2;
-
-                inGameMap.remove(player1);
-                inGameMap.remove(player2);
-
-                idlePlayers.add(player1);
+                String player1 = inGame.player1;
                 idlePlayers.add(player2);
+                idlePlayers.add(player1);
+                System.out.println("server: ending game between " + player1 + " and " + player2);
 
-                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
-                    socketWrapper.writeInGameList(inGameMap.keySet());
+                inGameMap.remove(player2);
+                inGameMap.remove(player1);
+
+                synchronized (nameWrapperMap) {
+                    for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
+                        socketWrapper.writeInGameList(inGameMap.keySet());
+                    }
                 }
             }
         }
@@ -275,8 +344,10 @@ public class Server extends Thread {
 
             gameHosts.remove(terminator);
 
-            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
-                socketWrapper.writeHosts(gameHosts);
+            synchronized (nameWrapperMap) {
+                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
+                    socketWrapper.writeHosts(gameHosts);
+                }
             }
         }
 
@@ -284,10 +355,26 @@ public class Server extends Thread {
             String player = wrapperNameMap.remove(wrapper);
             nameWrapperMap.remove(player);
             idlePlayers.remove(player);
+            gameHosts.remove(player);
 
-            for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
-                socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
+            InGame game = inGameMap.remove(player);
+
+            if (game != null) {
+                String opponent = game.player1.equals(player) ? game.player2 : game.player1;
+                ServerSocketWrapper wrapper = nameWrapperMap.get(opponent);
+
+                if (wrapper != null) {
+                    wrapper.interruptGame();
+                }
             }
+
+            synchronized (nameWrapperMap) {
+                for (ServerSocketWrapper socketWrapper : nameWrapperMap.values()) {
+                    socketWrapper.writeOnlinePlayers(nameWrapperMap.keySet());
+                }
+            }
+
+            server.handlers.remove(this);
 
             Thread.currentThread().interrupt();
         }
@@ -296,18 +383,22 @@ public class Server extends Thread {
             String ownPlayer = wrapperNameMap.get(wrapper);
             InGame inGame = inGameMap.get(ownPlayer);
 
+
             if (inGame == null) {
                 logger.warning("Illegal State: Made Move on non existent game.");
             } else {
                 String opponent = getOpponent(ownPlayer, inGame);
                 nameWrapperMap.get(opponent).writeMove(line);
             }
+
+            if (wrapper.isGameEnd(line)) {
+                endGame();
+            }
         }
 
         private String getOpponent(String ownPlayer, InGame inGame) {
             return ownPlayer.equals(inGame.player1) ? inGame.player2 : inGame.player1;
         }
-
     }
 
     private static class InGame {
@@ -317,6 +408,29 @@ public class Server extends Thread {
         private InGame(String player1, String player2) {
             this.player1 = player1;
             this.player2 = player2;
+        }
+    }
+
+    private class QueueManager implements Runnable {
+
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                if (!queuedSockets.isEmpty()) {
+                    Socket socket = queuedSockets.poll();
+                    try {
+                        ClientHandler handler = new ClientHandler(socket);
+                        handlers.add(handler);
+                    } catch (IOException e) {
+                        logger.log(SEVERE, "error occurred while handling socket", e);
+                    }
+                }
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
     }
 }

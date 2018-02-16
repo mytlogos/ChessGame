@@ -1,12 +1,9 @@
-package chessGame.gui;
+package chessGame.gui.multiplayer;
 
 import chessGame.multiplayer.Chat;
 import chessGame.multiplayer.PlayerClient;
-import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Bounds;
@@ -39,7 +36,7 @@ public class ChatWindow {
     @FXML
     private ListView<Chat.Message> chatView;
 
-    ChatWindow(PlayerClient client) throws IOException {
+    public ChatWindow(PlayerClient client) throws IOException {
         this.client = client;
 
         stage = new Stage();
@@ -52,11 +49,11 @@ public class ChatWindow {
         stage.titleProperty().bind(client.playerNameProperty().concat(" -Chat"));
 
         ObservableList<Chat.Message> messages = client.getGameChat().getMessages();
-        Bindings.bindContent(chatView.getItems(), messages);
-        chatView.setCellFactory(param -> new MessageCell());
+        chatView.setItems(messages);
+        chatView.setCellFactory(param -> new ChatBubble());
     }
 
-    void show() {
+    public void show() {
         stage.show();
     }
 

@@ -10,7 +10,7 @@ import java.util.function.Function;
  */
 public class BoardInitiator {
     public static void initiate(Game game) {
-        Board board = game.getBoard();
+        Board<Figure> board = game.getBoard();
         Color white = Color.WHITE;
         Color black = Color.BLACK;
 
@@ -33,7 +33,7 @@ public class BoardInitiator {
     }
 
     public static void initiateHashBoard(Game game) {
-        Board board = game.getBoard();
+        Board<Figure> board = game.getBoard();
         Color white = Color.WHITE;
         Color black = Color.BLACK;
 
@@ -73,7 +73,7 @@ public class BoardInitiator {
     }
 
     public static void initiateBoard(Game game) {
-        Board board = game.getBoard();
+        Board<Figure> board = game.getBoard();
         Color white = Color.WHITE;
         Color black = Color.BLACK;
 
@@ -92,7 +92,7 @@ public class BoardInitiator {
         }
     }
 
-    private static void setPositions(Function<Color, Figure> figureFunction, int row, int column, Board board) {
+    private static void setPositions(Function<Color, Figure> figureFunction, int row, int column, Board<Figure> board) {
         setFigure(figureFunction, row, column, Color.WHITE, board);
 
         row = 9 - row;
@@ -101,7 +101,7 @@ public class BoardInitiator {
         setFigure(figureFunction, row, column, Color.BLACK, board);
     }
 
-    private static void setFigure(Function<Color, Figure> figureFunction, int row, int column, Color color, Board board) {
+    private static void setFigure(Function<Color, Figure> figureFunction, int row, int column, Color color, Board<Figure> board) {
         final Position position = Position.get(row, column);
         Figure figure = figureFunction.apply(color);
 

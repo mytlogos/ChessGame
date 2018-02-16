@@ -98,7 +98,7 @@ public class ZobristHasher implements BoardHasher {
 
     public long getHash() {
         long hash = 0;
-        Board board = game.getBoard();
+        Board<Figure> board = game.getBoard();
         MoveHistory history = game.getHistory();
 
         for (int panel = 0; panel < 64; panel++) {

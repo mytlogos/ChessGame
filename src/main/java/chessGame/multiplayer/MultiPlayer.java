@@ -65,7 +65,7 @@ public class MultiPlayer extends Player {
     @Override
     public String toString() {
         return "MultiPlayer{" +
-                "type=" + getColor() +
+                "type=" + getColor() + "," +
                 "name='" + getName() + '\'' +
                 '}';
     }

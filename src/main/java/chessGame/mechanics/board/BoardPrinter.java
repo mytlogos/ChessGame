@@ -7,7 +7,7 @@ import chessGame.mechanics.Position;
  *
  */
 public class BoardPrinter {
-    public static void print(Board board) {
+    public static void print(Board<Figure> board) {
 
         for (int row = 1; row < 9; row++) {
             StringBuilder builder = new StringBuilder();

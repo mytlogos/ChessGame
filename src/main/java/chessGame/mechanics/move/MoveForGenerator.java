@@ -1,7 +1,7 @@
 package chessGame.mechanics.move;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.Game;
 
 import java.util.*;
@@ -22,7 +22,7 @@ public class MoveForGenerator {
     public static List<PlayerMove> getAllowedMoves(Color player, Game game) {
         if (player == null) return new ArrayList<>();
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
        /* BitSet snapShot = game.getSnapShot();
 
         if (game.getAtMoveColor() == player) {
@@ -69,7 +69,7 @@ public class MoveForGenerator {
     public static List<PlayerMove> getStrikes(Game game, Color player) {
         if (player == null) return new ArrayList<>();
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         final Map<Color, List<Figure>> playerListMap = board.getPlayerFigures();
         final Figure king = board.getKing(player.isWhite());
@@ -93,7 +93,7 @@ public class MoveForGenerator {
         return playerMoves;
     }
 
-    private static List<PlayerMove> mapToStrikeMove(Figure figure, Board board) {
+    private static List<PlayerMove> mapToStrikeMove(Figure figure, FigureBoard board) {
         final List<Position> allowedPositions = PositionGenerator.getAllowedPositions(figure, board);
 
         //no playerMoves if no position is allowed
@@ -119,7 +119,7 @@ public class MoveForGenerator {
         return moves;
     }
 
-    private static PlayerMove transformStrike(Figure figure, Position position, Board board) {
+    private static PlayerMove transformStrike(Figure figure, Position position, FigureBoard board) {
         if (figure == null) {
             return null;
         }
@@ -144,7 +144,7 @@ public class MoveForGenerator {
         }
     }
 
-    private static List<PlayerMove> mapToPlayerMove(Figure figure, Board board, Game game) {
+    private static List<PlayerMove> mapToPlayerMove(Figure figure, FigureBoard board, Game game) {
         final List<Position> allowedPositions = PositionGenerator.getAllowedPositions(figure, board);
 
         //no playerMoves if no position is allowed
@@ -279,7 +279,7 @@ public class MoveForGenerator {
         return null;
     }
 
-    private static boolean isInvalidPlayerMove(Figure king, PlayerMove playerMove, Board board, Game game) {
+    private static boolean isInvalidPlayerMove(Figure king, PlayerMove playerMove, FigureBoard board, Game game) {
         if (playerMove == null) {
             return true;
         }
@@ -297,11 +297,11 @@ public class MoveForGenerator {
         return check;
     }
 
-    public static boolean isInCheck(Figure figure, Board board) {
+    public static boolean isInCheck(Figure figure, FigureBoard board) {
         return isInCheck(figure, board, board.positionOf(figure));
     }
 
-    private static boolean isInCheck(Figure figure, Board board, Position position) {
+    private static boolean isInCheck(Figure figure, FigureBoard board, Position position) {
         Color player = figure.getColor();
         Color enemy = Color.getEnemy(player);
 
@@ -317,7 +317,7 @@ public class MoveForGenerator {
     }
 
 
-    private static PlayerMove transform(Figure figure, Position position, Board board) {
+    private static PlayerMove transform(Figure figure, Position position, FigureBoard board) {
 
         if (figure == null) {
             return null;
@@ -346,7 +346,7 @@ public class MoveForGenerator {
         return new PlayerMove(move, second);
     }
 
-    private static Collection<PlayerMove> getCastling(Figure king, Board board, Game game) {
+    private static Collection<PlayerMove> getCastling(Figure king, FigureBoard board, Game game) {
         final List<PlayerMove> moves = new ArrayList<>();
 
         boolean isWhite = king.isWhite();
@@ -366,7 +366,7 @@ public class MoveForGenerator {
         return moves;
     }
 
-    private static PlayerMove addCastling(Figure king, Board board, int column) {
+    private static PlayerMove addCastling(Figure king, FigureBoard board, int column) {
         int row = king.isWhite() ? 1 : 8;
         Position position = Position.get(row, column);
         Figure figure = board.figureAt(position);
@@ -392,7 +392,7 @@ public class MoveForGenerator {
         return addCastling(king, figure, rookPosition, kingPosition, rookColumn, kingColumn, positionList, board);
     }
 
-    private static Map<Figure, List<Position>> allowedPositions(Color player, Board board) {
+    private static Map<Figure, List<Position>> allowedPositions(Color player, FigureBoard board) {
         Map<Figure, List<Position>> map = new HashMap<>();
 
         for (Figure figure : board.getFigures(player)) {
@@ -403,7 +403,7 @@ public class MoveForGenerator {
     }
 
 
-    private static PlayerMove addCastling(Figure king, Figure rook, Position rookPosition, Position kingPosition, int rookColumn, int kingColumn, List<Position> enemyPositions, Board board) {
+    private static PlayerMove addCastling(Figure king, Figure rook, Position rookPosition, Position kingPosition, int rookColumn, int kingColumn, List<Position> enemyPositions, FigureBoard board) {
         boolean legal;
         int newKingColumn;
         int newRookColumn;
@@ -447,7 +447,7 @@ public class MoveForGenerator {
         return null;
     }
 
-    private static boolean checkEmpty(int rightColumn, int leftColumn, int row, Board board) {
+    private static boolean checkEmpty(int rightColumn, int leftColumn, int row, FigureBoard board) {
         boolean empty = true;
 
         for (int column = leftColumn + 1; column < rightColumn; column++) {

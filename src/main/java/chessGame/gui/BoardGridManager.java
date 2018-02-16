@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Manages the Board at Gui Level.
+ * Manages the Board<Figure> at Gui Level.
  * Enables moving pieces per dragging, clicking and selecting per keyboard.
  */
 class BoardGridManager implements Serializable {
@@ -51,6 +51,7 @@ class BoardGridManager implements Serializable {
     private ChangeListener<Number> roundListener = (observable1, playerNotAtMove, playerAtMove) -> processRoundChange();
     private ChangeListener<Boolean> madeMoveListener = (observable1, oldMadeMove, newMadeMove) -> processBoardChange(newMadeMove);
     private Map<String, Text> descriptionMap = new HashMap<>();
+    private VisualBoard visualBoard = null;
 
     BoardGridManager(ChessGameGui chess) {
         this.chess = chess;
@@ -147,11 +148,13 @@ class BoardGridManager implements Serializable {
     }
 
     private void processGameChange(ChessGame oldValue, ChessGame newValue) {
-        buildBoard(newValue.getBoard());
-        newValue.roundProperty().addListener(roundListener);
-        newValue.madeMoveProperty().addListener(madeMoveListener);
+        if (newValue != null) {
+            buildBoard(newValue.getBoard());
+            newValue.roundProperty().addListener(roundListener);
+            newValue.madeMoveProperty().addListener(madeMoveListener);
 
-        processBoardChange(true);
+            processBoardChange(true);
+        }
 
         if (oldValue != null) {
             oldValue.roundProperty().removeListener(roundListener);
@@ -159,7 +162,7 @@ class BoardGridManager implements Serializable {
         }
     }
 
-    private void buildBoard(Board board) {
+    private void buildBoard(Board<Figure> board) {
         positionMap.values().forEach(BoardPanel::clear);
         figureViewMap.clear();
 
@@ -172,6 +175,8 @@ class BoardGridManager implements Serializable {
                 boardPanel.setFigure(figureView);
             }
         }));
+        visualBoard = new VisualBoard(board, this);
+        visualBoard.mirrorBoard();
     }
 
     private void processBoardChange(boolean madeMove) {
@@ -205,6 +210,10 @@ class BoardGridManager implements Serializable {
                 '}';
     }
 
+    public VisualBoard getVisualBoard() {
+        return visualBoard;
+    }
+
     ObjectProperty<SideOrientation> orientationProperty() {
         return orientationProperty;
     }
@@ -217,27 +226,12 @@ class BoardGridManager implements Serializable {
         return getPositionPane(position).getFigureView();
     }
 
+    BoardPanel getPositionPane(Position position) {
+        return positionMap.computeIfAbsent(position, this::createPanel);
+    }
+
     Collection<BoardPanel> getFigurePositions() {
         return positionMap.values();
-    }
-
-    void setChosenPosition(BoardPanel chosenPosition) {
-        if (chosenPosition != null) {
-
-            final BoardPanel previousChosen = this.chosenPosition.get();
-            if (previousChosen != null) {
-                this.chosenPosition.set(chosenPosition);
-
-            } else if (chosenPosition.getFigureView() != null) {
-                this.chosenPosition.set(chosenPosition);
-            }
-        } else {
-            this.chosenPosition.set(null);
-        }
-    }
-
-    ChessGameGui getChess() {
-        return chess;
     }
 
     GridPane getGrid() {
@@ -301,6 +295,21 @@ class BoardGridManager implements Serializable {
         }
     }
 
+    void setChosenPosition(BoardPanel chosenPosition) {
+        if (chosenPosition != null) {
+
+            final BoardPanel previousChosen = this.chosenPosition.get();
+            if (previousChosen != null) {
+                this.chosenPosition.set(chosenPosition);
+
+            } else if (chosenPosition.getFigureView() != null) {
+                this.chosenPosition.set(chosenPosition);
+            }
+        } else {
+            this.chosenPosition.set(null);
+        }
+    }
+
     Text getBoardDescription(String s) {
         return descriptionMap.get(s);
     }
@@ -343,8 +352,8 @@ class BoardGridManager implements Serializable {
         });
     }
 
-    BoardPanel getPositionPane(Position position) {
-        return positionMap.computeIfAbsent(position, this::createPanel);
+    ChessGameGui getChess() {
+        return chess;
     }
 
     void setGame(ChessGame game) {

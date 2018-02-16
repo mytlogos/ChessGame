@@ -2,6 +2,7 @@ package chessGame.mechanics.move;
 
 import chessGame.mechanics.*;
 import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.Game;
 
 import java.util.*;
@@ -10,7 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Generates moves, which are allowed for the current state of the Board.
+ * Generates moves, which are allowed for the current state of the oard.
  * Has only the Method {@link #getAllowedMoves(Color, Game)}, which is accessible from outside the class.
  */
 public final class MoveStreamGenerator {
@@ -29,7 +30,7 @@ public final class MoveStreamGenerator {
     public static List<PlayerMove> getAllowedMoves(Color player, Game game) {
         if (player == null) return new ArrayList<>();
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         final Map<Color, List<Figure>> playerListMap = board.getPlayerFigures();
         final Figure king = board.getKing(player.isWhite());
@@ -52,7 +53,7 @@ public final class MoveStreamGenerator {
                         collect(Collectors.toList());
     }
 
-    private static Stream<? extends PlayerMove> mapToPlayerMove(Figure figure, Board board, Game game) {
+    private static Stream<? extends PlayerMove> mapToPlayerMove(Figure figure, FigureBoard board, Game game) {
         final List<Position> allowedPositions = PositionGenerator.getAllowedPositions(figure, board);
 
         //no playerMoves if no position is allowed
@@ -81,7 +82,7 @@ public final class MoveStreamGenerator {
         return allowedPositions.stream().map(position -> transform(figure, position, board));
     }
 
-    private static boolean checkPlayerMove(Figure king, PlayerMove playerMove, Board board, Game game) {
+    private static boolean checkPlayerMove(Figure king, PlayerMove playerMove, FigureBoard board, Game game) {
         if (playerMove == null) {
             return false;
         }
@@ -98,7 +99,7 @@ public final class MoveStreamGenerator {
         return inCheck;
     }
 
-    private static PlayerMove transform(Figure figure, Position position, Board board) {
+    private static PlayerMove transform(Figure figure, Position position, FigureBoard board) {
 
         if (figure == null) {
             return null;
@@ -124,7 +125,7 @@ public final class MoveStreamGenerator {
         return new PlayerMove(move, second);
     }
 
-    private static Collection<PlayerMove> getCastling(Figure king, Board board, Game game) {
+    private static Collection<PlayerMove> getCastling(Figure king, FigureBoard board, Game game) {
         final List<PlayerMove> moves = new ArrayList<>();
 
         Color kingPlayer = king.getColor();
@@ -214,11 +215,11 @@ public final class MoveStreamGenerator {
         return null;
     }
 
-    public static boolean isInCheck(Figure king, Board board) {
+    public static boolean isInCheck(Figure king, FigureBoard board) {
         return !getCheckFigure(king, board, board.positionOf(king)).isEmpty();
     }
 
-    private static PlayerMove addCastling(Figure king, Board board, int column) {
+    private static PlayerMove addCastling(Figure king, FigureBoard board, int column) {
         int row = king.isWhite() ? 1 : 8;
         Position position = Position.get(row, column);
         Figure figure = board.figureAt(position);
@@ -260,7 +261,7 @@ public final class MoveStreamGenerator {
         return PlayerMove.PromotionMove(pawnMove, move.getSecondaryMove().orElse(null), promotionMove);
     }
 
-    private static List<Figure> getCheckFigure(Figure figure, Board board, Position position) {
+    private static List<Figure> getCheckFigure(Figure figure, FigureBoard board, Position position) {
         Color player = figure.getColor();
         Color enemy = Color.getEnemy(player);
         //gets possible positions per figure of enemy
@@ -273,11 +274,11 @@ public final class MoveStreamGenerator {
                         collect(Collectors.toList());
     }
 
-    private static Map<Figure, List<Position>> allowedPositions(Color player, Board board) {
+    private static Map<Figure, List<Position>> allowedPositions(Color player, FigureBoard board) {
         return board.getPlayerFigures().get(player).stream().collect(Collectors.toMap(Function.identity(), figure -> PositionGenerator.getAllowedPositions(figure, board)));
     }
 
-    private static PlayerMove addCastling(Figure king, Figure rook, Position rookPosition, Position kingPosition, int rookColumn, int kingColumn, List<Position> enemyPositions, Board board) {
+    private static PlayerMove addCastling(Figure king, Figure rook, Position rookPosition, Position kingPosition, int rookColumn, int kingColumn, List<Position> enemyPositions, FigureBoard board) {
         boolean legal;
         int newKingColumn;
         int newRookColumn;
@@ -321,7 +322,7 @@ public final class MoveStreamGenerator {
         return null;
     }
 
-    private static boolean checkEmpty(int rightColumn, int leftColumn, int row, Board board) {
+    private static boolean checkEmpty(int rightColumn, int leftColumn, int row, FigureBoard board) {
         boolean empty = true;
 
         for (int column = leftColumn + 1; column < rightColumn; column++) {
@@ -345,7 +346,7 @@ public final class MoveStreamGenerator {
     public static List<PlayerMove> getStrikes(Game game, Color player) {
         if (player == null) return new ArrayList<>();
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         final Map<Color, List<Figure>> playerListMap = board.getPlayerFigures();
         final Figure king = board.getKing(player.isWhite());
@@ -368,7 +369,7 @@ public final class MoveStreamGenerator {
                         collect(Collectors.toList());
     }
 
-    private static Stream<PlayerMove> mapToStrikeMove(Figure figure, Board board) {
+    private static Stream<PlayerMove> mapToStrikeMove(Figure figure, FigureBoard board) {
         final List<Position> allowedPositions = PositionGenerator.getAllowedPositions(figure, board);
 
         //no playerMoves if no position is allowed
@@ -386,7 +387,7 @@ public final class MoveStreamGenerator {
         return allowedPositions.stream().map(position -> transformStrike(figure, position, board));
     }
 
-    private static PlayerMove transformStrike(Figure figure, Position position, Board board) {
+    private static PlayerMove transformStrike(Figure figure, Position position, FigureBoard board) {
         if (figure == null) {
             return null;
         }

@@ -1,5 +1,6 @@
 package chessGame.gui;
 
+import chessGame.mechanics.Color;
 import chessGame.mechanics.Figure;
 import chessGame.mechanics.FigureType;
 import chessGame.mechanics.Position;
@@ -250,6 +251,8 @@ class BoardPanel extends StackPane implements Serializable {
     private ObjectProperty<Figure> showOffProperty() {
         return showOff;
     }
+
+    private Color color;
 
     private void setColor(Position position) {
         if (position.getRow() % 2 == 1) {

@@ -4,7 +4,7 @@ import chessGame.mechanics.Color;
 import chessGame.mechanics.Figure;
 import chessGame.mechanics.FigureType;
 import chessGame.mechanics.Player;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.move.MoveHistory;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -56,7 +56,7 @@ public interface Game {
 
     Color getAtMoveColor();
 
-    Board getBoard();
+    FigureBoard getBoard();
 
     ReadOnlyStringProperty timeProperty();
 

@@ -93,8 +93,4 @@ public class MapBoard extends AbstractBoard {
 //        return getFiguresByStream();
     }
 
-    @Override
-    public BoardSnapShot getSnapShot() {
-        return getSnapShotByStream();
-    }
 }

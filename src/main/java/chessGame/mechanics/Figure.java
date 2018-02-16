@@ -5,7 +5,7 @@ import javafx.scene.image.Image;
 import java.io.Serializable;
 
 /**
- * A class representing a Chess Figure on a Board.
+ * A class representing a Chess Figure on a Board<Figure>.
  * <p>
  * A Figure can have the same hashCode but is not necessarily equal.
  * This class overrides {@link #hashCode()} but not {@link #equals(Object)}.

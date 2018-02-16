@@ -1,7 +1,6 @@
 package chessGame.mechanics.board;
 
 import chessGame.mechanics.Color;
-import chessGame.mechanics.Figure;
 import chessGame.mechanics.Position;
 
 import java.util.List;
@@ -10,27 +9,21 @@ import java.util.Map;
 /**
  *
  */
-public interface Board extends Iterable<Figure>{
+public interface Board<E> extends Iterable<E>{
 
-    void setFigure(Figure figure, Position position);
+    void setFigure(E figure, Position position);
 
     void setEmpty(Position position);
 
-    Position positionOf(Figure figure);
+    Position positionOf(E figure);
 
-    Figure figureAt(Position position);
+    E figureAt(Position position);
 
-    List<Figure> getFigures(Color player);
+    List<E> getFigures(Color player);
 
-    Map<Color, List<Figure>> getPlayerFigures();
+    Map<Color, List<E>> getPlayerFigures();
 
-    List<Figure> getFigures();
-
-    BoardSnapShot getSnapShot();
-
-    Figure getKing(boolean white);
+    List<E> getFigures();
 
     boolean isEmptyAt(Position position);
-
-    long getHash();
 }

@@ -17,11 +17,11 @@ public class CheckValidator {
 
     private final Figure figure;
     private final Position figurePosition;
-    private final Board board;
+    private final Board<Figure> board;
     private final Map<FigureType, List<CheckItem>> map = new HashMap<>();
     private List<Position> possibleFigurePositions;
 
-    public CheckValidator(Figure figure, Board board) {
+    public CheckValidator(Figure figure, Board<Figure> board) {
         this.figure = figure;
         this.board = board;
         figurePosition = this.board.positionOf(figure);
@@ -57,13 +57,13 @@ public class CheckValidator {
 
     }
 
-    private List<Position> getAllowedPositions(Figure figure, Board board) {
+    private List<Position> getAllowedPositions(Figure figure, Board<Figure> board) {
         return new ArrayList<>();
     }
 
     private CheckItem getCheckItem(Figure figure) {
 
-        //should never be not on Board
+        //should never be not on Board<Figure>
         Position position = board.positionOf(figure);
 
         CheckItem result = null;

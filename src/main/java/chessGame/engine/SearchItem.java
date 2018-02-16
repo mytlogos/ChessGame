@@ -1,5 +1,6 @@
 package chessGame.engine;
 
+import chessGame.mechanics.Figure;
 import chessGame.mechanics.board.Board;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.property.IntegerProperty;
@@ -13,8 +14,8 @@ import java.util.List;
  *
  */
 class SearchItem {
-    private final Board before;
-    private final Board after;
+    private final Board<Figure> before;
+    private final Board<Figure> after;
     private final PlayerMove move;
     private final List<SearchItem> children = new ArrayList<>();
     private final IntegerProperty depth = new SimpleIntegerProperty();
@@ -24,7 +25,7 @@ class SearchItem {
     private SearchItem maxChild;
     private boolean searching;
 
-    SearchItem(Board before, Board after, int level, PlayerMove move, int rating) {
+    SearchItem(Board<Figure> before, Board<Figure> after, int level, PlayerMove move, int rating) {
         this.before = before;
         this.after = after;
         this.level = level;
@@ -88,11 +89,11 @@ class SearchItem {
         }
     }
 
-    Board getAfter() {
+    Board<Figure> getAfter() {
         return after;
     }
 
-    Board getBefore() {
+    Board<Figure> getBefore() {
         return before;
     }
 

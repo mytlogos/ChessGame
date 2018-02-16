@@ -31,7 +31,9 @@ public class HistoryDisplay extends VBox {
     }
 
     private void bindGame(ChessGame newValue, ChessGame oldValue) {
-        newValue.roundProperty().addListener(roundListener);
+        if (newValue != null) {
+            newValue.roundProperty().addListener(roundListener);
+        }
 
         if (oldValue != null) {
             oldValue.roundProperty().removeListener(roundListener);
@@ -42,7 +44,7 @@ public class HistoryDisplay extends VBox {
 
     private void initTable() {
         historyRoundsView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
+        historyRoundsView.setSortPolicy(null);
         historyRoundsView.getColumns().add(getIndexColumn());
 
         TableColumn<String, String> whiteColumn = new TableColumn<>("Weiß");
@@ -58,9 +60,11 @@ public class HistoryDisplay extends VBox {
         blackColumn.setCellValueFactory(p -> {
             String value = p.getValue();
             int separator = value.indexOf('%');
-            return new SimpleStringProperty(value.substring(separator + 1, value.length()));
+            return new SimpleStringProperty(separator == -1 ? "" : value.substring(separator + 1, value.length()));
         });
 
+        whiteColumn.setSortable(false);
+        blackColumn.setSortable(false);
         historyRoundsView.getColumns().add(whiteColumn);
         historyRoundsView.getColumns().add(blackColumn);
     }
@@ -86,6 +90,7 @@ public class HistoryDisplay extends VBox {
         indexColumn.setPrefWidth(50);
         indexColumn.setMaxWidth(50);
         indexColumn.setMinWidth(50);
+        indexColumn.setSortable(false);
         indexColumn.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>((historyRoundsView.getItems().indexOf(p.getValue()) + 1)));
         return indexColumn;
     }

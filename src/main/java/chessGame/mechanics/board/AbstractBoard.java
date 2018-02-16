@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 /**
  *
  */
-public abstract class AbstractBoard implements Board {
+public abstract class AbstractBoard implements FigureBoard {
     private Figure whiteKing;
     private Figure blackKing;
     private long hash;
@@ -63,20 +63,11 @@ public abstract class AbstractBoard implements Board {
         return stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    BoardSnapShot getSnapShotByStream() {
-        String[] snapshot = stream().map(this::getNotation).toArray(String[]::new);
-        return new BoardSnapShot(snapshot);
-    }
-
-    String getNotation(Figure figure) {
-        return figure == null ? null : figure.getNotation() + "";
-    }
-
     private static class BoardIterator implements Iterator<Figure> {
-        private final Board board;
+        private final Board<Figure> board;
         private int index;
 
-        private BoardIterator(Board board) {
+        private BoardIterator(Board<Figure> board) {
             this.board = board;
         }
 

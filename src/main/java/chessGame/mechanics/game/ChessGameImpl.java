@@ -3,9 +3,11 @@ package chessGame.mechanics.game;
 import chessGame.engine.AlphaBetaExtendedEngine;
 import chessGame.engine.Engine;
 import chessGame.engine.EngineWorker;
+import chessGame.mechanics.Figure;
 import chessGame.mechanics.Player;
 import chessGame.mechanics.RuleEvaluator;
 import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -93,7 +95,7 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
         this.finished.set(true);
     }
 
-    public ChessGameImpl(Board board, BitSet set) {
+    public ChessGameImpl(FigureBoard board, BitSet set) {
         super(board, set);
         engineMap = EngineWorker.getEngineWorker().getEngines(this);
         initListener();
@@ -264,7 +266,7 @@ public class ChessGameImpl extends GameImpl implements ChessGame {
                 setRound(getHistory().size());
                 Engine engine = engineMap.get(getAtMove());
 
-                //start engine only after all round listeners are processed, else concurrency problems on Board will happen,
+                //start engine only after all round listeners are processed, else concurrency problems on Board<Figure> will happen,
                 //because it is mutable
                 if (engine != null) {
                     engine.processRound(getRound());

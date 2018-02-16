@@ -1,12 +1,13 @@
 package chessGame.gui;
 
-import chessGame.mechanics.*;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.Figure;
+import chessGame.mechanics.FigureType;
+import chessGame.mechanics.Position;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.Game;
 import chessGame.mechanics.move.Move;
 import chessGame.mechanics.move.MoveForGenerator;
 import chessGame.mechanics.move.PlayerMove;
-import javafx.beans.value.ChangeListener;
 import javafx.scene.layout.Pane;
 
 import java.util.ArrayList;
@@ -38,9 +39,17 @@ class MoveShower {
         });
     }
 
+    private void showMoves(BoardPanel position) {
+        final FigureView figureView = position.getFigureView();
+        if (figureView != null) {
+            final Figure figure = figureView.getFigure();
+            grid.getFigurePositions().forEach(boardPanel -> boardPanel.setShowOff(figure));
+        }
+    }
+
     void prepareMoves() {
         Game game = grid.getGame();
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         final List<PlayerMove> movesWhite = MoveForGenerator.getAllowedMoves(game.getWhite().getColor(), game);
         final List<PlayerMove> movesBlack = MoveForGenerator.getAllowedMoves(game.getBlack().getColor(), game);
@@ -76,14 +85,6 @@ class MoveShower {
                 }));
             }
         });
-    }
-
-    private void showMoves(BoardPanel position) {
-        final FigureView figureView = position.getFigureView();
-        if (figureView != null) {
-            final Figure figure = figureView.getFigure();
-            grid.getFigurePositions().forEach(boardPanel -> boardPanel.setShowOff(figure));
-        }
     }
 
     private void setPawnMove(BoardPanel key, Figure figure, List<PlayerMove> moves) {

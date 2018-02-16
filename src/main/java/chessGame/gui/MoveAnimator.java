@@ -7,7 +7,6 @@ import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.move.Move;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.animation.*;
-import javafx.beans.value.ChangeListener;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.effect.DropShadow;
@@ -48,7 +47,7 @@ class MoveAnimator {
         } else {
             transition = redoNormalMove(lastMove);
         }
-        transition.setOnFinished(event -> grid.getGame().nextRound());
+        transition.setOnFinished(event -> finishAnimation());
         transition.play();
     }
 
@@ -80,7 +79,7 @@ class MoveAnimator {
         final FigureView figureView = grid.getFigureView(figure);
         currentPane.setFigure(figureView);
 
-        final Transition mainTransition = getTransition(figureView, currentPane, nextPane, () -> normalTransitionFinished(currentPane, nextPane, figureView));
+        final Transition mainTransition = getTransition(figureView, currentPane, nextPane, false, () -> normalTransitionFinished(currentPane, nextPane, figureView));
 
         return getTotalRedoTransition(lastMove, figureView, mainTransition);
     }
@@ -118,8 +117,7 @@ class MoveAnimator {
             }
 
             //get figure which was defeated
-            Figure figure = grid.getGame().getBoard().figureAt(strikeMove.getFrom());
-            final FigureView defeatedView = grid.getFigureView(figure);
+            FigureView defeatedView = grid.getVisualBoard().figureAt(strikeMove.getFrom());
 
             //get panel as target and bench as beginning
             final BoardPanel currentPanel = grid.getPositionPane(strikeMove.getFrom());
@@ -152,8 +150,7 @@ class MoveAnimator {
             //important, else it will be hidden behind other positionPanes
             bench.toFront();
 
-            transition.setOnFinished(event -> transitionFinished(defeatedView, () -> {
-            }));
+            transition.setOnFinished(event -> transitionFinished(defeatedView, () -> {}));
             return transition;
         } else {
             throw new IllegalStateException("sekundär zug ist vom selben spieler obwohl es keine Rochade ist");
@@ -200,8 +197,13 @@ class MoveAnimator {
         } else {
             transition = makeNormalMove(lastMove);
         }
-        transition.setOnFinished(event -> grid.getGame().nextRound());
+        transition.setOnFinished(event -> finishAnimation());
         transition.play();
+    }
+
+    private void finishAnimation() {
+        grid.getVisualBoard().mirrorBoard();
+        grid.getGame().nextRound();
     }
 
     private Transition makeNormalMove(PlayerMove playerMove) {
@@ -209,18 +211,15 @@ class MoveAnimator {
         final Move mainMove = playerMove.getMainMove();
         final Transition mainTransition = getNormalTransition(mainMove.getFrom(), mainMove.getTo());
 
-        final BoardPanel currentPane = grid.getPositionPane(mainMove.getFrom());
-        currentPane.toFront();
-
         return getTotalMakeMoveTransition(playerMove, mainMove, mainTransition);
     }
 
     private Transition getStrikeLessTransition(Move mainMove, Transition mainTransition) {
-        return grid.getFigureView(mainMove.getFrom()).isDragging() ? new SequentialTransition() : new SequentialTransition(mainTransition);
+        return grid.getVisualBoard().figureAt(mainMove.getFrom()).isDragging() ? new SequentialTransition() : new SequentialTransition(mainTransition);
     }
 
     private Transition getStrikeTransition(Move mainMove, Transition mainTransition, Move move) {
-        if (grid.getFigureView(mainMove.getFrom()).isDragging()) {
+        if (grid.getVisualBoard().figureAt(mainMove.getFrom()).isDragging()) {
             return new SequentialTransition(doStrikeMove(move, mainMove));
         } else {
             return new ParallelTransition(mainTransition, doStrikeMove(move, mainMove));
@@ -234,12 +233,11 @@ class MoveAnimator {
         final BoardPanel currentPane = grid.getPositionPane(mainMove.getFrom());
         final BoardPanel nextPane = grid.getPositionPane(promotionMove.getTo());
 
-        final FigureView figureView = grid.getFigureView(mainMove.getFrom());
+        final FigureView figureView = grid.getVisualBoard().figureAt(mainMove.getFrom());
 
         if (!figureView.equals(currentPane.getFigureView())) {
             throw new IllegalStateException("board ist nicht synchron");
         }
-
 
         if (mainMove.getTo() != Position.Promoted) {
             throw new IllegalStateException("mainMove not promoted on Promotion!");
@@ -249,7 +247,7 @@ class MoveAnimator {
         final FigureView promotedView = new FigureView(promotedFigure, grid);
         grid.addFigureView(promotedView);
 
-        final Transition mainTransition = getTransition(figureView, currentPane, nextPane, () -> normalTransitionFinished(currentPane, nextPane, promotedView));
+        final Transition mainTransition = getTransition(figureView, currentPane, nextPane, true, () -> promotionTransitionFinished(currentPane, nextPane, figureView, promotedView));
 
         //if figureView is dragging remove the pawn and add the promotedView because there will be no animation for this part
         if (figureView.isDragging()) {
@@ -258,6 +256,11 @@ class MoveAnimator {
         }
 
         return getTotalMakeMoveTransition(playerMove, mainMove, mainTransition);
+    }
+
+    private void promotionTransitionFinished(BoardPanel currentPane, BoardPanel nextPane, FigureView figureView, FigureView promotedView) {
+        nextPane.getChildren().remove(figureView);
+        normalTransitionFinished(currentPane, nextPane, promotedView);
     }
 
     private Transition getTotalMakeMoveTransition(PlayerMove playerMove, Move mainMove, Transition mainTransition) {
@@ -278,7 +281,7 @@ class MoveAnimator {
         final Transition mainTransition = getNormalTransition(mainMove.getFrom(), mainMove.getTo());
         final Transition secondaryTransition = getNormalTransition(secondaryMove.getFrom(), secondaryMove.getTo());
 
-        return grid.getFigureView(mainMove.getFrom()).isDragging() ?
+        return grid.getVisualBoard().figureAt(mainMove.getFrom()).isDragging() ?
                 new SequentialTransition(secondaryTransition) :
                 new ParallelTransition(mainTransition, secondaryTransition);
     }
@@ -291,30 +294,35 @@ class MoveAnimator {
                 throw new IllegalStateException("Sekundärzug ist kein Zug wo eine Figur geschlagen wird, obwohl es als normal gekennzeichnet ist");
             }
 
-            final FigureView secondaryFigureView = grid.getFigureView(strikeMove.getFrom());
+            final FigureView secondaryFigureView = grid.getVisualBoard().figureAt(strikeMove.getFrom());
 
 
             final BoardPanel currentPosition = grid.getPositionPane(strikeMove.getFrom());
             final PlayerBench.LostFigureItem bench = grid.getChess().getBench(atMovePlayer.isWhite()).getContainer(strikeMove.getFigure());
 
-            if (!secondaryFigureView.equals(currentPosition.getFigureView())) {
-                throw new IllegalStateException("board ist nicht synchron");
-            }
-
-            final Transition secondaryTransition = getTransition(secondaryFigureView, currentPosition, bench,
+            final Transition secondaryTransition = getTransition(secondaryFigureView, currentPosition, bench, false,
                     () -> strikeTransitionFinished(secondaryFigureView, currentPosition, bench));
 
             secondaryFigureView.setEffect(null);
 
-            final Duration duration = Duration.INDEFINITE.isIndefinite() ? Duration.ZERO : Duration.INDEFINITE.subtract(Duration.seconds(0.3));
-            final PauseTransition pauseTransition = new PauseTransition(duration);
-            pauseTransition.setOnFinished(event -> finishPause(secondaryFigureView, currentPosition));
+            final PauseTransition pauseTransition = getPauseTransition(secondaryFigureView, currentPosition);
 
             //first wait before own figure is shortly before enemy figure, then start moving away
             return new SequentialTransition(pauseTransition, secondaryTransition);
         } else {
             throw new IllegalStateException("sekundär zug ist vom selben spieler obwohl es keine Rochade ist");
         }
+    }
+
+    private PauseTransition getPauseTransition(FigureView secondaryFigureView, BoardPanel currentPosition) {
+        final Duration duration = Duration.INDEFINITE.isIndefinite() ?
+                Duration.ZERO :
+                Duration.INDEFINITE.subtract(Duration.seconds(0.3));
+
+        final PauseTransition pauseTransition = new PauseTransition(duration);
+
+        pauseTransition.setOnFinished(event -> finishPause(secondaryFigureView, currentPosition));
+        return pauseTransition;
     }
 
     private void finishPause(FigureView secondaryFigureView, BoardPanel currentPosition) {
@@ -332,13 +340,13 @@ class MoveAnimator {
         final BoardPanel currentPane = grid.getPositionPane(from);
         final BoardPanel nextPane = grid.getPositionPane(to);
 
-        final FigureView figureView = grid.getFigureView(from);
+        final FigureView figureView = grid.getVisualBoard().figureAt(from);
 
         if (!figureView.equals(currentPane.getFigureView())) {
             throw new IllegalStateException("board ist nicht synchron");
         }
 
-        return getTransition(figureView, currentPane, nextPane, () -> normalTransitionFinished(currentPane, nextPane, figureView));
+        return getTransition(figureView, currentPane, nextPane, true, () -> normalTransitionFinished(currentPane, nextPane, figureView));
     }
 
     private void normalTransitionFinished(BoardPanel current, BoardPanel next, FigureView figureView) {
@@ -349,14 +357,29 @@ class MoveAnimator {
     }
 
 
-    private Transition getTransition(Node node, Pane start, Pane goal, Runnable runnable) {
+    private Transition getTransition(Node node, Pane start, Pane goal, boolean reverse, Runnable runnable) {
         TranslateTransition transition = new TranslateTransition();
         transition.setNode(node);
 
         Translate translate = new Translate(start, goal).invoke();
 
-        transition.setToX(translate.getTranslateX());
-        transition.setToY(translate.getTranslateY());
+        if (reverse) {
+            goal.getChildren().add(node);
+
+            transition.setFromX(-translate.getTranslateX());
+            transition.setFromY(-translate.getTranslateY());
+            transition.setToX(0);
+            transition.setToY(0);
+            //important, else it will be hidden behind other positionPanes
+            goal.toFront();
+            start.toBack();
+        } else {
+            transition.setToX(translate.getTranslateX());
+            transition.setToY(translate.getTranslateY());
+
+            //important, else it will be hidden behind other positionPanes
+            start.toFront();
+        }
 
         //set moving "speed", with an base speed of 100 units per seconds or a max duration of 2 seconds
         double duration = getDistanceDuration(translate);
@@ -366,9 +389,6 @@ class MoveAnimator {
         //to create an effect of "lifting the figure up"
         node.setTranslateY(-5);
         node.setEffect(new DropShadow(10, 0, 10, Color.BLACK));
-
-        //important, else it will be hidden behind other positionPanes
-        start.toFront();
 
         transition.setOnFinished(event -> transitionFinished(node, runnable));
         return transition;

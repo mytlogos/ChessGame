@@ -101,20 +101,4 @@ public class MultiArrayBoard extends AbstractBoard {
         return Arrays.stream(board).flatMap(Arrays::stream);
     }
 
-    @Override
-    public BoardSnapShot getSnapShot() {
-        String[] snapshot = new String[64];
-
-        for (int column = 0; column < 8; column++) {
-            for (int row = 0; row < 8; row++) {
-                Figure figure = board[column][row];
-
-                if (figure != null) {
-                    snapshot[row * 8 + column] = getNotation(figure);
-                }
-            }
-        }
-        return new BoardSnapShot(snapshot);
-//        return getSnapShotByStream();
-    }
 }

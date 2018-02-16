@@ -1,7 +1,7 @@
 package chessGame.engine;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.game.SimulationGame;
 import chessGame.mechanics.move.Move;
@@ -134,7 +134,7 @@ public class AlphaBetaExtendedEngine extends Engine {
     private int alphaBetaTransPosition(SimulationGame game, int maxDepth, int depth, int alpha, int beta) {
         alphaBetaCounter++;
 
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
         int originalAlpha = alpha;
 
         Entry entry = table.getEntry(board);
@@ -226,7 +226,7 @@ public class AlphaBetaExtendedEngine extends Engine {
         }
     }
 
-    private void storeEntry(int depth, int beta, Board board, int originalAlpha, PlayerMove bestMove, int max) {
+    private void storeEntry(int depth, int beta, FigureBoard board, int originalAlpha, PlayerMove bestMove, int max) {
         long hash = board.getHash();
 
         Entry.Bound bound;
@@ -335,16 +335,16 @@ public class AlphaBetaExtendedEngine extends Engine {
     }
 
     /**
-     * Evaluates the Board according to the sum of the player figures worth, subtracting the worth
+     * Evaluates the Board<Figure> according to the sum of the player figures worth, subtracting the worth
      * of their figures on the bench.
-     * A Board which evaluates to a Draw will be subtracted 500 points, if it evaluates to a Win
+     * A Board<Figure> which evaluates to a Draw will be subtracted 500 points, if it evaluates to a Win
      * 2000 points will be added.
      *
      * @param game game with board to evaluate
      * @return board evaluation in point of view of the drawing/moving player
      */
     private int evaluate(SimulationGame game) {
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         Map<Color, List<Figure>> playerFigures = board.getPlayerFigures();
 
@@ -389,11 +389,11 @@ public class AlphaBetaExtendedEngine extends Engine {
         return eval;
     }
 
-    private double positionSum(Board board, List<Figure> atMoveFigures, List<Position> notAtMovePosition) {
+    private double positionSum(FigureBoard board, List<Figure> atMoveFigures, List<Position> notAtMovePosition) {
         return atMoveFigures.stream().filter(figure -> notAtMovePosition.contains(board.positionOf(figure))).mapToDouble(figure -> figure.getType().getWorth()).sum();
     }
 
-    private List<Position> getAllPositions(Board board, List<Figure> atMoveFigures) {
+    private List<Position> getAllPositions(FigureBoard board, List<Figure> atMoveFigures) {
         return atMoveFigures.stream().flatMap(figure -> PositionGenerator.getPositions(figure, board).stream()).collect(Collectors.toList());
     }
 

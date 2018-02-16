@@ -4,6 +4,7 @@ import chessGame.mechanics.Color;
 import chessGame.mechanics.move.PlayerMove;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -11,9 +12,7 @@ import javafx.collections.ObservableList;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -27,7 +26,7 @@ public class PlayerClient implements Runnable {
     private final BooleanProperty startFailed = new SimpleBooleanProperty();
     private final Chat allChat = new Chat();
     private ObjectProperty<MultiPlayerGame> game = new SimpleObjectProperty<>();
-    private ObservableList<MultiPlayer> onlinePlayer = FXCollections.observableArrayList();
+    private ObservableList<MultiPlayer> onlinePlayer = FXCollections.observableArrayList(this::extractMultiPlayerObservables);
     private ObservableList<String> inGamePlayers = FXCollections.observableArrayList();
     private ObservableList<String> hostingPlayers = FXCollections.observableArrayList();
     private String hostName;
@@ -43,7 +42,7 @@ public class PlayerClient implements Runnable {
         int port = 4445;
 
         //the ip of your server
-        String serverHost = "";
+        String serverHost = "192.168.1.5";
         this.wrapper = new ClientSocketWrapper(new Socket(serverHost, port));
 
         socketListener = new Thread(this);
@@ -69,6 +68,13 @@ public class PlayerClient implements Runnable {
                 player.setHosting(hostingPlayer.contains(player.getName()));
             }
         });
+    }
+
+    private Observable[] extractMultiPlayerObservables(MultiPlayer param) {
+        Observable[] observables = new Observable[2];
+        observables[0] = param.hostingProperty();
+        observables[1] = param.inGameProperty();
+        return observables;
     }
 
     private ObservableList<String> getInGamePlayers() {
@@ -136,6 +142,9 @@ public class PlayerClient implements Runnable {
 
                 } else if (wrapper.isChat(line)) {
                     Chat.Message message = wrapper.getMessage(line);
+
+                    //set isOwnMessage Flag
+                    message.setOwnMessage(getPlayerName());
                     getCurrentChat().addMessage(message);
 
                 } else if (wrapper.isStartGameFailed(line)) {
@@ -236,18 +245,14 @@ public class PlayerClient implements Runnable {
         white.setType(Color.WHITE);
 
         MultiPlayerGame game = new MultiPlayerGame(black, white, this);
-
-        game.finishedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                gameChat = null;
-                ownPlayer.setInGame(false);
-                setGame(null);
-                wrapper.writeEndGame();
-            }
-        });
-
         ownPlayer.setInGame(true);
         setGame(game);
+    }
+
+    public void endGame() {
+        gameChat = null;
+        getPlayer().setInGame(false);
+        setGame(null);
     }
 
     private void setHosts(Collection<String> playerList) {

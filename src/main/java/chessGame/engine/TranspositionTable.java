@@ -1,6 +1,6 @@
 package chessGame.engine;
 
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -58,7 +58,7 @@ public class TranspositionTable {
         return Math.abs((int) (hash % size));
     }
 
-    Entry getEntry(Board board) {
+    Entry getEntry(FigureBoard board) {
         long hash = board.getHash();
         int index = getIndex(hash);
         Entry item = items[index];

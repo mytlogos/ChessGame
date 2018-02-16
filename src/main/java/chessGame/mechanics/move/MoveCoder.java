@@ -175,9 +175,9 @@ public class MoveCoder {
     }
 
     public static PlayerMove decode(String encodedMove) {
-        Move move = decodeMove(encodedMove, 0, false);
         Move secondary = decodeMove(encodedMove, moveSize, false);
-        Move promotion = decodeMove(encodedMove, moveSize * 2, true);
+        Move promotion = decodeMove(encodedMove, moveSize * 2, false);
+        Move move = decodeMove(encodedMove, 0, promotion != null);
 
         if (secondary != null && secondary.isMoving(FigureType.ROOK) && secondary.isWhite() == move.isWhite()) {
             if (!move.isMoving(FigureType.KING)) {
@@ -212,7 +212,7 @@ public class MoveCoder {
             if (figure != FigureType.PAWN && figure != FigureType.KING) {
                 from = Position.Unknown;
             } else {
-                throw new IllegalStateException("Pawn or King can only be moved from on the Board");
+                throw new IllegalStateException("Pawn or King can only be moved from on the Board<Figure>");
             }
         } else {
             int fromInBoardIndex = MoveCoder.fromInBoardIndex + offSet;
@@ -332,7 +332,7 @@ public class MoveCoder {
             if (figure != FigureType.PAWN && figure != FigureType.KING) {
                 from = Position.Unknown;
             } else {
-                throw new IllegalStateException("Pawn or King can only be moved from on the Board");
+                throw new IllegalStateException("Pawn or King can only be moved from on the Board<Figure>");
             }
         } else {
             String fromString = binaryString.substring(fromInBoardIndex, fromOutBoardIndex);

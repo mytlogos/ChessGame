@@ -3,7 +3,7 @@ package chessGame.mechanics.move;
 import chessGame.mechanics.Figure;
 import chessGame.mechanics.FigureType;
 import chessGame.mechanics.Position;
-import chessGame.mechanics.board.Board;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.Game;
 
 /**
@@ -15,7 +15,7 @@ public final class MoveMaker {
         throw new IllegalStateException("No Instances allowed!");
     }
 
-    public static void makeSafeMove(PlayerMove playerMove, Board board, Game game) {
+    public static void makeSafeMove(PlayerMove playerMove, FigureBoard board, Game game) {
         if (!game.getAllowedMoves().contains(playerMove)) {
             throw new IllegalStateException("der zug " + playerMove + " ist nicht erlaubt für " + game.getAtMove());
         } else if (game.getLastMove() != null && game.getLastMove().getColor().equals(playerMove.getColor())) {
@@ -25,7 +25,7 @@ public final class MoveMaker {
         makeMove(playerMove, board, game);
     }
 
-    static void makeMove(PlayerMove playerMove, Board board, Game game) {
+    static void makeMove(PlayerMove playerMove, FigureBoard board, Game game) {
         Move secondMove = playerMove.getSecondaryMove().orElse(null);
 
         if (secondMove != null && secondMove.getFigure() == FigureType.KING && secondMove.getTo() == Position.Bench) {
@@ -46,7 +46,7 @@ public final class MoveMaker {
         }
     }
 
-    private static void castle(PlayerMove playerMove, Board board, Game game) {
+    private static void castle(PlayerMove playerMove, FigureBoard board, Game game) {
         final Move mainMove = playerMove.getMainMove();
         final Move secondaryMove = playerMove.getSecondaryMove().orElseThrow(() -> new IllegalStateException("rook move for castling is null"));
 
@@ -54,7 +54,7 @@ public final class MoveMaker {
         makeMove(secondaryMove, board, game);
     }
 
-    private static void promote(PlayerMove playerMove, Board board, Game game) {
+    private static void promote(PlayerMove playerMove, FigureBoard board, Game game) {
         final Move mainMove = playerMove.getMainMove();
         final FigureType figureType = mainMove.getFigure();
 
@@ -79,7 +79,7 @@ public final class MoveMaker {
         board.setFigure(promotionMove.getFigure().create(mainMove.getColor()), promotionMove.getTo());
     }
 
-    private static void makeMove(Move move, Board board, Game game) {
+    private static void makeMove(Move move, FigureBoard board, Game game) {
         final FigureType figureType = move.getFigure();
         final Position from = move.getFrom();
 
@@ -106,7 +106,7 @@ public final class MoveMaker {
      * First the mainMove, then the promotionMove and at last the secondaryMove
      * will be undone.
      */
-    public static void redo(Board board, Game game, PlayerMove lastMove) {
+    public static void redo(FigureBoard board, Game game, PlayerMove lastMove) {
         if (lastMove != null) {
             final Move mainMove = lastMove.getMainMove();
 
@@ -120,7 +120,7 @@ public final class MoveMaker {
         }
     }
 
-    private static void redo(Move move, Board board, Game game) {
+    private static void redo(Move move, FigureBoard board, Game game) {
         final Position from = move.getFrom();
         final Position to = move.getTo();
 

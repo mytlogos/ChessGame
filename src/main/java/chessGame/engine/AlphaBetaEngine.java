@@ -1,11 +1,9 @@
 package chessGame.engine;
 
 import chessGame.mechanics.*;
-import chessGame.mechanics.board.Board;
-import chessGame.mechanics.game.ChessGameImpl;
+import chessGame.mechanics.board.FigureBoard;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.game.SimulationGame;
-import chessGame.mechanics.game.SimulationGameImpl;
 import chessGame.mechanics.move.*;
 import javafx.util.Duration;
 
@@ -122,16 +120,16 @@ class AlphaBetaEngine extends Engine {
     }
 
     /**
-     * Evaluates the Board according to the sum of the player figures worth, subtracting the worth
+     * Evaluates the Board<Figure> according to the sum of the player figures worth, subtracting the worth
      * of their figures on the bench.
-     * A Board which evaluates to a Draw will be subtracted 500 points, if it evaluates to a Win
+     * A Board<Figure> which evaluates to a Draw will be subtracted 500 points, if it evaluates to a Win
      * 2000 points will be added.
      *
      * @param game game with board to evaluate
      * @return board evaluation in point of view of the drawing/moving player
      */
     private int evaluate(SimulationGame game) {
-        Board board = game.getBoard();
+        FigureBoard board = game.getBoard();
 
         Map<Color, List<Figure>> playerFigures = board.getPlayerFigures();
 
@@ -174,11 +172,11 @@ class AlphaBetaEngine extends Engine {
         return eval;
     }
 
-    private double positionSum(Board board, List<Figure> atMoveFigures, List<Position> notAtMovePosition) {
+    private double positionSum(FigureBoard board, List<Figure> atMoveFigures, List<Position> notAtMovePosition) {
         return atMoveFigures.stream().filter(figure -> notAtMovePosition.contains(board.positionOf(figure))).mapToDouble(figure -> figure.getType().getWorth()).sum();
     }
 
-    private List<Position> getAllPositions(Board board, List<Figure> atMoveFigures) {
+    private List<Position> getAllPositions(FigureBoard board, List<Figure> atMoveFigures) {
         return atMoveFigures.stream().flatMap(figure -> PositionGenerator.getAllowedPositions(figure, board).stream()).collect(Collectors.toList());
     }
 

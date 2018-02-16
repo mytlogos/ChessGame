@@ -44,7 +44,7 @@ public final class Position implements Comparable<Position>, Serializable {
 
     public static Position get(int panel) {
         if (!isInBoard(panel)) {
-            throw new IllegalArgumentException("Not on Board! " + panel);
+            throw new IllegalArgumentException("Not on Board<Figure>! " + panel);
         }
         return new Position(panel);
     }
