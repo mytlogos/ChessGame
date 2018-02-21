@@ -6,7 +6,13 @@ import chessGame.mechanics.Position;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.mechanics.move.Move;
 import chessGame.mechanics.move.PlayerMove;
+import chessGame.settings.SetAble;
+import chessGame.settings.SetAbleEntry;
+import chessGame.settings.SetAbleManager;
+import chessGame.settings.Settings;
 import javafx.animation.*;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.effect.DropShadow;
@@ -17,11 +23,23 @@ import javafx.util.Duration;
 /**
  * Coordinates the {@link PlayerMove} at the gui layer.
  */
-class MoveAnimator {
+class MoveAnimator implements SetAble {
     private final BoardGridManager grid;
+    private DoubleProperty animationSpeed = new SimpleDoubleProperty();
+    private SetAbleManager manager;
 
     MoveAnimator(BoardGridManager grid) {
         this.grid = grid;
+        Settings.getSettings().register(this);
+    }
+
+    @Override
+    public SetAbleManager getManager() {
+        if (manager == null) {
+            String animationKey = "AnimationSpeed";
+            manager = new SetAbleManager(new SetAbleEntry(animationKey, animationSpeed));
+        }
+        return manager;
     }
 
     void animateChange() {

@@ -42,7 +42,7 @@ public class PlayerClient implements Runnable {
         int port = 4445;
 
         //the ip of your server
-        String serverHost = "192.168.1.5";
+        String serverHost = "192.168.1.102";
         this.wrapper = new ClientSocketWrapper(new Socket(serverHost, port));
 
         socketListener = new Thread(this);

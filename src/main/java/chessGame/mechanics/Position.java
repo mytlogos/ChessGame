@@ -97,6 +97,10 @@ public final class Position implements Comparable<Position>, Serializable {
         return row;
     }
 
+    public static int getColumn(char c) {
+        return Character.toUpperCase(c) - (int) 'A' + 1;
+    }
+
     public int getColumn() {
         if (column == 0) {
             column = (panel % 8) + 1;

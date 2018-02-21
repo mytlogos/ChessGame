@@ -1,3 +1,8 @@
+package chessServer;
+
+import chessGame.mechanics.move.MoveCoder;
+import chessGame.mechanics.move.PlayerMove;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,6 +33,7 @@ class ServerSocketWrapper {
     private static final String blackColor = "BLACK";
     private static final String gameInterrupted = "GAMEINTERRUPT";
     private static final String shutDown = "ShutdownServer";
+    private static final String reset = "Reset";
 
     private final OutputStream outputStream;
     private final InputStream inputStream;
@@ -37,12 +43,31 @@ class ServerSocketWrapper {
         inputStream = socket.getInputStream();
     }
 
+    boolean isReset(String line) {
+        return line.equals(reset);
+    }
+
     boolean isShutDown(String line) {
         return line.equals(shutDown);
     }
 
     boolean isGameInterrupted(String line) {
         return line.startsWith(gameInterrupted);
+    }
+    private static final String moveRejected = "MOVEREJECTED";
+
+    void writeMoveRejected(PlayerMove move) {
+        String encode = MoveCoder.encode(move);
+        write(moveRejected + separator + encode);
+    }
+
+    PlayerMove getMove(String input) {
+        if (!isMove(input)) {
+            return null;
+        }
+        int i = input.indexOf(separator);
+        String substring = input.substring(i + 1, input.lastIndexOf(separator));
+        return MoveCoder.decode(substring);
     }
 
     void interruptGame() {
@@ -65,7 +90,7 @@ class ServerSocketWrapper {
         write(startGameFailed);
     }
 
-    void write(String output) {
+    private void write(String output) {
         //dont close it
         PrintWriter writer = new PrintWriter(outputStream, true);
         writer.println(output);

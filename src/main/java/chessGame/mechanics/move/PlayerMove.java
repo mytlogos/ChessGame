@@ -83,6 +83,14 @@ public class PlayerMove implements Cloneable {
         return type == Type.PROMOTION;
     }
 
+    public boolean isEnpassant() {
+        return mainMove.isMoving(FigureType.PAWN)
+                && isStrike()
+                && secondaryMove.isMoving(FigureType.PAWN)
+                && secondaryMove.getFrom().getRow() == mainMove.getFrom().getRow()
+                && Math.abs(secondaryMove.getFrom().getColumn() - mainMove.getFrom().getColumn()) == 1;
+    }
+
     final protected void setPromotionMove(Move promotionMove) {
         this.promotionMove = promotionMove;
     }

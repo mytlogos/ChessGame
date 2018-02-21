@@ -11,6 +11,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="ChessGame" />
     <orderEntry type="library" name="Maven: org.controlsfx:controlsfx:8.40.14" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.openjdk.jmh:jmh-generator-annprocess:1.20" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.openjdk.jmh:jmh-core:1.20" level="project" />

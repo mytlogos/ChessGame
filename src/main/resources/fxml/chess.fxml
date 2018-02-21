@@ -2,9 +2,6 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
@@ -30,18 +27,7 @@
     </right>
     <top>
         <VBox BorderPane.alignment="CENTER">
-            <MenuBar>
-                <Menu mnemonicParsing="false" text="File">
-                    <MenuItem mnemonicParsing="false" onAction="#openSettings" text="Settings" />
-                    <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
-                </Menu>
-                <Menu mnemonicParsing="false" text="Edit">
-                    <MenuItem mnemonicParsing="false" text="Delete" />
-                </Menu>
-                <Menu mnemonicParsing="false" text="Help">
-                    <MenuItem mnemonicParsing="false" text="About" />
-                </Menu>
-            </MenuBar>
+            <fx:include source="menuBar.fxml" fx:id="menuBar"/>
             <HBox fx:id="topContainer" alignment="CENTER" spacing="5.0">
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
@@ -53,7 +39,7 @@
                 </StackPane>
                 <Region HBox.hgrow="ALWAYS" />
                 <Button fx:id="gameChangerBtn" mnemonicParsing="false" onAction="#changeGame" text="Start SinglePlayer" />
-            <Button layoutX="115.0" layoutY="15.0" mnemonicParsing="false" onAction="#startMultiPlay" text="Start MultiPlayer" />
+            <Button fx:id="multiPlayBtn" layoutX="115.0" layoutY="15.0" mnemonicParsing="false" onAction="#startMultiPlay" text="Start MultiPlayer" />
                 <Button fx:id="pauseBtn" mnemonicParsing="false" onAction="#pause" text="Pause" />
                 <Text fx:id="timer" strokeType="OUTSIDE" strokeWidth="0.0" />
                 <Button fx:id="redoBtn" mnemonicParsing="false" onAction="#redo" text="Rückgängig" />

@@ -71,7 +71,13 @@ public class HistoryDisplay extends VBox {
 
     private void resetHistory() {
         historyRoundsView.getItems().clear();
-        MoveHistory history = getGame().getHistory();
+        ChessGame game = getGame();
+
+        if (game == null) {
+            return;
+        }
+
+        MoveHistory history = game.getHistory();
 
         for (int i = 0; i < history.size(); i++) {
             PlayerMove move = history.moveAtPly(i);

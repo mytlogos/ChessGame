@@ -7,6 +7,10 @@ import chessGame.mechanics.Position;
 import chessGame.mechanics.board.Board;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.multiplayer.MultiPlayerGame;
+import chessGame.settings.EnumEntry;
+import chessGame.settings.SetAble;
+import chessGame.settings.SetAbleManager;
+import chessGame.settings.Settings;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.NumberBinding;
 import javafx.beans.property.ObjectProperty;
@@ -34,7 +38,7 @@ import java.util.TreeMap;
  * Manages the Board<Figure> at Gui Level.
  * Enables moving pieces per dragging, clicking and selecting per keyboard.
  */
-class BoardGridManager implements Serializable {
+class BoardGridManager implements Serializable, SetAble {
     private final MoveAnimator moveAnimator;
     private final MoveShower moveShower;
 
@@ -52,6 +56,7 @@ class BoardGridManager implements Serializable {
     private ChangeListener<Boolean> madeMoveListener = (observable1, oldMadeMove, newMadeMove) -> processBoardChange(newMadeMove);
     private Map<String, Text> descriptionMap = new HashMap<>();
     private VisualBoard visualBoard = null;
+    private SetAbleManager setAbleManager;
 
     BoardGridManager(ChessGameGui chess) {
         this.chess = chess;
@@ -81,8 +86,17 @@ class BoardGridManager implements Serializable {
             GridPane.setValignment(rowNode, VPos.CENTER);
             GridPane.setValignment(columnNode, VPos.CENTER);
         }
+//        orientationProperty.set(SideOrientation.UP);
+        Settings.getSettings().register(this);
+    }
 
-        orientationProperty.set(SideOrientation.UP);
+    @Override
+    public SetAbleManager getManager() {
+        if (setAbleManager == null) {
+            String orientationKey = "Orientation";
+            setAbleManager = new SetAbleManager(new EnumEntry(orientationKey, orientationProperty, SideOrientation.class));
+        }
+        return setAbleManager;
     }
 
     private void initListener() {
@@ -153,7 +167,7 @@ class BoardGridManager implements Serializable {
             newValue.roundProperty().addListener(roundListener);
             newValue.madeMoveProperty().addListener(madeMoveListener);
 
-            processBoardChange(true);
+            moveShower.prepareMoves();
         }
 
         if (oldValue != null) {
@@ -220,10 +234,6 @@ class BoardGridManager implements Serializable {
 
     void addFigureView(FigureView view) {
         figureViewMap.put(view.getFigure(), view);
-    }
-
-    FigureView getFigureView(Position position) {
-        return getPositionPane(position).getFigureView();
     }
 
     BoardPanel getPositionPane(Position position) {

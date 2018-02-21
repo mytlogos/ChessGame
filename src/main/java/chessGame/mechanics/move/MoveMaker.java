@@ -9,7 +9,7 @@ import chessGame.mechanics.game.Game;
 /**
  *
  */
-public final class MoveMaker {
+public abstract class MoveMaker {
 
     private MoveMaker() {
         throw new IllegalStateException("No Instances allowed!");

@@ -74,6 +74,10 @@ public class MoveHistory implements Iterable<PlayerMove> {
         return state == CastleState.BOTH || state == CastleState.LONG;
     }
 
+    public PlayerMove get(int i) {
+        return moves.get(i);
+    }
+
     private CastlingRights getRights(boolean white) {
         return white ? whiteCastlingRights : blackCastlingRights;
     }

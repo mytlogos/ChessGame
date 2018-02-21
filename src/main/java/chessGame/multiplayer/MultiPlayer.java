@@ -19,6 +19,11 @@ public class MultiPlayer extends Player {
         this.name = name;
     }
 
+    public MultiPlayer(String name, Color color) {
+        super(color);
+        this.name = name;
+    }
+
     public String getName() {
         return name;
     }

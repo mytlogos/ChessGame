@@ -7,16 +7,21 @@ import chessGame.mechanics.Player;
 import chessGame.mechanics.game.ChessGame;
 import chessGame.multiplayer.MultiPlayerGame;
 import chessGame.multiplayer.PlayerClient;
-import javafx.application.Platform;
+import chessGame.settings.SetAble;
+import chessGame.settings.SetAbleEntry;
+import chessGame.settings.SetAbleManager;
+import chessGame.settings.Settings;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.MenuBar;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -28,7 +33,6 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -36,9 +40,18 @@ import java.util.Optional;
 /**
  *
  */
-public class ChessGameGui {
+public class ChessGameGui implements SetAble {
     private final Path arrow = getArrow();
     private final ObjectProperty<ChessGame> currentGame = new SimpleObjectProperty<>();
+
+    @FXML
+    private MenuBar menuBar;
+
+    @FXML
+    private chessGame.gui.MenuBar menuBarController;
+
+    @FXML
+    private Button multiPlayBtn;
 
     @FXML
     private HBox topContainer;
@@ -69,11 +82,29 @@ public class ChessGameGui {
     @FXML
     private VBox chessContainer;
 
+    private BooleanProperty autoLogin = new SimpleBooleanProperty();
+    private BooleanProperty historyDisplayed = new SimpleBooleanProperty();
+
+    private SetAbleManager setAbleManager;
     private BoardGridManager manager;
     private HistoryDisplay historyDisplay;
     private PlayerClient client = null;
 
+    public ChessGameGui() {
+        Settings.getSettings().register(this);
+    }
+
+    private ObjectProperty<ChessGame> currentGameProperty() {
+        return currentGame;
+    }
+
+    ChessGame getCurrentGame() {
+        return currentGameProperty().get();
+    }
+
     public void initialize() {
+        menuBarController.setMain(this);
+
         whitePlayerController.setPlayer(Color.WHITE);
         blackPlayerController.setPlayer(Color.BLACK);
 
@@ -81,30 +112,47 @@ public class ChessGameGui {
         timer.setText("0:00");
         pauseBtn.setDisable(true);
 
-        historyDisplay = new HistoryDisplay();
-        chessContainer.getChildren().add(historyDisplay);
-
         boardGrid.widthProperty().addListener((observable, oldValue, newValue) -> System.out.println(newValue));
 
+        initHistory();
+
+        manager.gameProperty().bind(currentGameProperty());
+
+        redoBtn.disableProperty().bind(currentGameProperty().isNull());
+
+        if (autoLogin.get()) {
+            try {
+                client = new PlayerClient();
+            } catch (IOException e) {
+                System.out.println("login failed");
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void initHistory() {
+        historyDisplay = new HistoryDisplay();
         historyDisplay.prefWidthProperty().bind(boardGrid.widthProperty());
         historyDisplay.maxWidthProperty().bind(boardGrid.widthProperty());
+        historyDisplay.gameProperty().bind(currentGameProperty());
 
-        historyDisplay.gameProperty().bind(currentGame);
-        manager.gameProperty().bind(currentGame);
-
-        redoBtn.disableProperty().bind(currentGame.isNull());
+        historyDisplayed.addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                chessContainer.getChildren().add(historyDisplay);
+            } else {
+                chessContainer.getChildren().remove(historyDisplay);
+            }
+        });
     }
 
-    public void openSettings() {
-        Settings settings = new Settings();
-        manager.orientationProperty().bind(settings.whiteOrientationProperty());
-        Stage stage = new Stage();
-        stage.setScene(new Scene(settings));
-        stage.show();
-    }
-
-    public void exit() {
-        Platform.exit();
+    @Override
+    public SetAbleManager getManager() {
+        if (setAbleManager == null) {
+            SetAbleEntry loginEntry = new SetAbleEntry("autoLogin", autoLogin);
+            SetAbleEntry historyEntry = new SetAbleEntry("historyDisplayed", historyDisplayed);
+            setAbleManager = new SetAbleManager(loginEntry, historyEntry);
+        }
+        return setAbleManager;
     }
 
     void showPlayerAtMove(Player player) {
@@ -121,7 +169,7 @@ public class ChessGameGui {
 
     @FXML
     void redo() {
-        currentGame.get().redo();
+        currentGameProperty().get().redo();
     }
 
     GridPane getBoardGrid() {
@@ -152,7 +200,7 @@ public class ChessGameGui {
 
         if (multiPlayerGame.isPresent()) {
             MultiPlayerGame game = multiPlayerGame.get();
-            currentGame.set(game);
+            currentGameProperty().set(game);
             configPreGameSetting(game);
 
             ChatWindow window = new ChatWindow(client);
@@ -196,7 +244,7 @@ public class ChessGameGui {
         return dialog;
     }
 
-    private void configPreGameSetting(ChessGame current) {
+    void configPreGameSetting(ChessGame current) {
         pauseBtn.disableProperty().bind(current.runningProperty().not());
 
         current.runningProperty().addListener((observable, oldValue, newValue) -> {
@@ -272,13 +320,13 @@ public class ChessGameGui {
 
     @FXML
     private void changeGame() {
-        if (currentGame.get() == null) {
+        if (currentGameProperty().get() == null) {
             initGame();
         } else {
-            if (currentGame.get().isFinished()) {
+            if (currentGameProperty().get().isFinished()) {
                 initGame();
-            } else if (currentGame.get().isRunning()) {
-                currentGame.get().setPaused(true);
+            } else if (currentGameProperty().get().isRunning()) {
+                currentGameProperty().get().setPaused(true);
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
                 alert.setContentText("Möchten sie wirklich aufgeben?");
                 final Optional<ButtonType> optional = alert.showAndWait();
@@ -287,38 +335,42 @@ public class ChessGameGui {
                     if (buttonType == ButtonType.OK) {
                         initGame();
                     } else {
-                        currentGame.get().setPaused(false);
+                        currentGameProperty().get().setPaused(false);
                     }
                 });
             } else {
                 timer.textProperty().unbind();
-                timer.textProperty().bind(currentGame.get().timeProperty());
-                currentGame.get().setRunning(true);
+                timer.textProperty().bind(currentGameProperty().get().timeProperty());
+                currentGameProperty().get().setRunning(true);
             }
         }
+    }
+
+    void setCurrentGame(ChessGame currentGame) {
+        this.currentGameProperty().set(currentGame);
     }
 
     private void initGame() {
         Dialog<ChessGame> gameDialog = new StartDialog();
         final Optional<ChessGame> game = gameDialog.showAndWait();
 
-        currentGame.set(game.orElse(null));
+        ChessGame chessGame = game.orElse(null);
+        setCurrentGame(chessGame);
 
-        final ChessGame current = currentGame.get();
-        if (current == null) {
+        if (chessGame == null) {
             showNoNewGameAlert();
         } else {
-            configPreGameSetting(current);
+            configPreGameSetting(chessGame);
         }
     }
 
     @FXML
     private void pause() {
-        if (!currentGame.get().isPaused()) {
-            currentGame.get().setPaused(true);
+        if (!currentGameProperty().get().isPaused()) {
+            currentGameProperty().get().setPaused(true);
             pauseBtn.setText("Fortsetzen");
         } else {
-            currentGame.get().setPaused(false);
+            currentGameProperty().get().setPaused(false);
             pauseBtn.setText("Pausieren");
         }
     }

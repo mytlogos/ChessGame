@@ -38,6 +38,8 @@ public class ClientSocketWrapper {
     private static final String blackColor = "BLACK";
     private static final String gameInterrupted = "GAMEINTERRUPT";
     private static final String shutDown = "ShutdownServer";
+    private static final String reset = "Reset";
+    private static final String moveRejected = "MOVEREJECTED";
 
 
     private final OutputStream outputStream;
@@ -46,6 +48,19 @@ public class ClientSocketWrapper {
     public ClientSocketWrapper(Socket socket) throws IOException {
         outputStream = socket.getOutputStream();
         inputStream = socket.getInputStream();
+    }
+
+    public boolean isMoveRejected(String line) {
+        return line.startsWith(moveRejected);
+    }
+
+    public PlayerMove getRejectedMove(String line) {
+        String encoded = line.substring(line.indexOf(separator) + 1);
+        return MoveCoder.decode(encoded);
+    }
+
+    public void resetServer() {
+        write(reset);
     }
 
     public void shutDownServer() {
